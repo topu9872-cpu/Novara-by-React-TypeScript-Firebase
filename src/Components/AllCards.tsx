@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import { ShoppingCart } from "lucide-react";
 import gsap from "gsap";
-
+import { FaStar } from "react-icons/fa";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 interface ProductItem {
   id: string | number;
   title: string;
@@ -12,7 +13,7 @@ interface ProductItem {
 }
 
 export const Card: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+ const containerRef = useRef<HTMLDivElement>(null);
 const fakeProducts: ProductItem[] = [
     {
       id: 1,
@@ -26,7 +27,7 @@ const fakeProducts: ProductItem[] = [
       id: 2,
       title: "Velvet Lounge Chair",
       price: "$249.00",
-      rating: 4.8,
+      rating: 2.6,
       reviewsCount: 210,
       imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=600&auto=format&fit=crop",
     },
@@ -48,36 +49,45 @@ const fakeProducts: ProductItem[] = [
     },
   ];
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const cards = containerRef.current?.querySelectorAll(".product-card");
-      if (cards) {
-        gsap.fromTo(
-          cards,
-          { opacity: 0, y: 30, scale: 0.98 },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.8,
-            stagger: 0.12,
-            ease: "power3.out",
-          }
-        );
-      }
-    }, containerRef);
 
-    return () => ctx.revert();
-  }, []);
 
+useEffect(() => {
+  const cards = containerRef.current?.querySelectorAll(".product-card");
+
+  if (!cards) return;
+
+  gsap.fromTo(
+    cards,
+    {
+      opacity: 0,
+      y: 60,
+    },
+    {
+      opacity: 1,
+      y: 0,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: "top 85%",
+        toggleActions: "play none none reverse",
+      },
+    }
+  );
+
+  return () => {
+    ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+  };
+}, []);
   return (
     <div className="w-full max-w-7xl mx-auto p-6">
       <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {fakeProducts.map((product) => (
-          <div
-            key={product.id}
-            className="product-card w-full bg-white rounded-3xl p-4 shadow-sm border border-neutral-100 opacity-0 flex flex-col justify-between hover:shadow-md transition-shadow"
-          >
+         <div
+  key={product.id}
+  className="product-card w-full bg-white rounded-3xl p-4 shadow-sm border border-neutral-100 opacity-0 flex flex-col justify-between hover:shadow-md transition-shadow"
+>
             {/* Product Image Container */}
             <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-neutral-100 flex items-center justify-center mb-4">
               <img
@@ -107,14 +117,39 @@ const fakeProducts: ProductItem[] = [
                 </button>
               </div>
 
-              <div className="flex items-center space-x-1.5 pt-1">
-                <div className="flex text-amber-400 text-xs">
-                  {"★".repeat(Math.floor(product.rating))}
-                </div>
-                <span className="text-xs text-neutral-400 font-medium">
-                  ({product.reviewsCount})
-                </span>
-              </div>
+
+
+<div className="flex items-center gap-1">
+  <div className="flex items-center gap-0.5 text-xs">
+    {Array.from({ length: 5 }).map((_, index) => {
+      const fill = Math.min(Math.max(product.rating - index, 0), 1);
+
+      return (
+        <span
+          key={index}
+          className="relative inline-block text-neutral-300"
+        >
+          {/* Empty star */}
+          <FaStar />
+
+          {/* Filled portion */}
+          <span
+            className="absolute inset-0 overflow-hidden text-amber-400"
+            style={{
+              width: `${fill * 100}%`,
+            }}
+          >
+            <FaStar />
+          </span>
+        </span>
+      );
+    })}
+  </div>
+
+  <span className="text-xs text-neutral-400 font-medium">
+    ({product.reviewsCount})
+  </span>
+</div>
             </div>
           </div>
         ))}

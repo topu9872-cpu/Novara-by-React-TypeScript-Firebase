@@ -52,7 +52,7 @@ export const Navbar: React.FC = () => {
       className="w-full  bg-linear-to-r from-white to-amber-50  sticky top-0 z-50"
     >
       {/* Main Navbar Container */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-5">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 py-5">
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

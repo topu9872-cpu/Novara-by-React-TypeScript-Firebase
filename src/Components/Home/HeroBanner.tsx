@@ -59,6 +59,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   }, []);
 
   return (
+    <section className="mx-4">
     <div className="w-full max-w-7xl mx-auto p-4">
       <div 
         ref={containerRef}
@@ -117,6 +118,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         </div>
       </div>
     </div>
+    </section>
   );
 };
 

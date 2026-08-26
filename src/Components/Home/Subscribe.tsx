@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { toast } from 'sonner';
 
 interface NewsletterBannerProps {
   onSubscribe?: (email: string) => void;
@@ -53,8 +54,10 @@ const Subscribe: React.FC<NewsletterBannerProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim()) {
+       toast.success('Thsnks for suscribeing')
       if (onSubscribe) {
         onSubscribe(email);
+       
       } else {
         console.log('Subscribed with email:', email);
       }

@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Loading from "./Components/Loading";
 import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
+import Collections from "./pages/Collections";
 
 const router = createBrowserRouter([
   {
@@ -18,8 +19,12 @@ const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "/Shop",
+        path: "/shop",
         element: <Shop />,
+      },
+      {
+        path: "/collections",
+        element: <Collections />,
       },
     ],
   },

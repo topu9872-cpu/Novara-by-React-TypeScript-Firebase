@@ -7,6 +7,7 @@ import {
   FaUndo,
   FaHeadset,
 } from "react-icons/fa";
+import { NavLink } from "react-router";
 
 const Banner = () => {
   const compRef = useRef(null);
@@ -99,14 +100,14 @@ const Banner = () => {
 
             {/* Buttons */}
             <div className="anim-buttons mt-8 flex flex-wrap gap-4 opacity-0">
-              <button className="group bg-slate-900 hover:bg-black text-white px-6 py-3.5 rounded-xl flex items-center gap-2 shadow-lg shadow-slate-900/10 transition-all duration-300 hover:scale-105 active:scale-95">
+              <NavLink to={'/shop'} className="group bg-slate-900 hover:bg-black text-white px-6 py-3.5 rounded-xl flex items-center gap-2 shadow-lg shadow-slate-900/10 transition-all duration-300 hover:scale-105 active:scale-95">
                 <span>Shop Now</span>
                 <FaArrowRight className="transition-transform duration-300 group-hover:translate-x-1.5" />
-              </button>
+              </NavLink>
 
-              <button className="text-gray-700 font-medium hover:text-black transition-colors px-4 py-3.5">
+              <NavLink to={'/Collections'} className="text-gray-700 font-medium hover:text-black transition-colors px-4 py-3.5">
                 Explore Collections
-              </button>
+              </NavLink>
             </div>
 
             {/* Trust Badges */}

@@ -10,6 +10,9 @@ import Shop from "./pages/Shop";
 import Collections from "./pages/Collections";
 import LoginForm from "./Components/Form/LoginForm";
 import RegisterForm from "./Components/Form/RegisterForm";
+import AboutUs from "./Components/AboutUs";
+import Blog from "./Components/Blog";
+import Contact from "./Components/Contact";
 
 const router = createBrowserRouter([
   {
@@ -27,6 +30,18 @@ const router = createBrowserRouter([
       {
         path: "/collections",
         element: <Collections />,
+      },
+      {
+        path: "/about-us",
+        element: <AboutUs />,
+      },
+      {
+        path: "/blog",
+        element: <Blog />,
+      },
+      {
+        path: "/contact",
+        element: <Contact />,
       },
       {
         path: "/login",

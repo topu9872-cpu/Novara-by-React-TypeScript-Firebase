@@ -9,26 +9,23 @@ const categories = [
     image:
       "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80",
   },
-  {
+ {
     title: "Bedroom",
     items: "90+ items",
     bg: "bg-[#e4e9f0]", // soft blue-gray tint
-    image:
-      "https://images.unsplash.com/photo-1540518614846-7ede433c4ef0?auto=format&fit=crop&w=600&q=80",
+    image: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?q=80&w=600&auto=format&fit=crop",
   },
-  {
+{
     title: "Dining Room",
     items: "75+ items",
     bg: "bg-[#f8ede3]", // soft peach/warm cream tint
-    image:
-      "https://images.unsplash.com/photo-1617806118233-18e1c0c85243?auto=format&fit=crop&w=600&q=80",
+    image: "https://images.unsplash.com/photo-1615529162924-f8605388461d?q=80&w=600&auto=format&fit=crop",
   },
   {
     title: "Office Room",
     items: "60+ items",
     bg: "bg-[#f0f0f0]", // soft neutral grey tint
-    image:
-      "https://images.unsplash.com/photo-1580481077494-e3299ac2569e?auto=format&fit=crop&w=600&q=80",
+    image: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=600&auto=format&fit=crop",
   },
   {
     title: "Outdoor",

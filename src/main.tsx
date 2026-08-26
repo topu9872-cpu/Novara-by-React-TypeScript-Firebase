@@ -8,6 +8,8 @@ import Loading from "./Components/Loading";
 import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
 import Collections from "./pages/Collections";
+import LoginForm from "./Components/Form/LoginForm";
+import RegisterForm from "./Components/Form/RegisterForm";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +27,14 @@ const router = createBrowserRouter([
       {
         path: "/collections",
         element: <Collections />,
+      },
+      {
+        path: "/login",
+        element: <LoginForm />,
+      },
+      {
+        path: "/register",
+        element: <RegisterForm />,
       },
     ],
   },

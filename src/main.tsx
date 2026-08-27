@@ -60,7 +60,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ContextProvider>
       <Suspense fallback={<Loading />}>
-        <Toaster />
+        <Toaster/>
 
         <RouterProvider router={router} />
       </Suspense>

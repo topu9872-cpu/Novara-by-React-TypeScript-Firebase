@@ -1,16 +1,33 @@
 import { useState, useRef, useEffect } from "react";
-import { FaGoogle, FaFacebookF, FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa6";
-import { NavLink } from "react-router";
+import {
+  FaGoogle,
+  FaFacebookF,
+  FaArrowRight,
+  FaEye,
+  FaEyeSlash,
+  FaCheck,
+  FaXmark,
+} from "react-icons/fa6";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import gsap from "gsap";
+import type { User } from "../../types/User";
+import { toast } from "sonner";
+import { signUp } from "../../services/auth";
 
 export default function RegisterForm() {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
   const formElementsRef = useRef<HTMLDivElement>(null);
+
+  // Live validation checks
+  const isMinLength = password.length >= 8;
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const from = location.state?.from?.pathname || "/";
 
   useEffect(() => {
     // GSAP Entrance Animation
@@ -18,14 +35,21 @@ export default function RegisterForm() {
       gsap.fromTo(
         cardRef.current,
         { opacity: 0, y: 40, scale: 0.96 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }
+        { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" },
       );
 
       if (formElementsRef.current) {
         gsap.fromTo(
           formElementsRef.current.children,
           { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: "power2.out", delay: 0.2 }
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.08,
+            ease: "power2.out",
+            delay: 0.2,
+          },
         );
       }
     });
@@ -33,9 +57,48 @@ export default function RegisterForm() {
     return () => ctx.revert();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log({ fullName, email, password });
+
+    const formData = Object.fromEntries(
+      new FormData(e.currentTarget),
+    ) as unknown as User;
+
+    if (!formData.email) {
+      toast.error("Please enter your email", {
+        style: {
+          background: "#DC2626",
+          color: "#FFFFFF",
+          border: "1px solid #B91C1C",
+        },
+      });
+      return;
+    }
+
+    if (!isMinLength || !hasSpecialChar) {
+      toast.error("Please meet all password requirements", {
+        style: {
+          background: "#DC2626",
+          color: "#FFFFFF",
+          border: "1px solid #B91C1C",
+        },
+      });
+      return;
+    }
+
+    try {
+      const user = await signUp(
+        formData.name!,
+        formData.email,
+        formData.password,
+      );
+
+      toast.success(`Welcome ${user.displayName}`);
+      navigate(from, { replace: true });
+      e.currentTarget.reset();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   return (
@@ -46,7 +109,10 @@ export default function RegisterForm() {
       >
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <NavLink to="/" className="inline-block text-3xl font-extrabold tracking-tight text-emerald-900 mb-2">
+          <NavLink
+            to="/"
+            className="inline-block text-3xl font-extrabold tracking-tight text-emerald-900 mb-2"
+          >
             Novara
           </NavLink>
           <p className="text-sm text-neutral-500 font-medium">
@@ -83,7 +149,7 @@ export default function RegisterForm() {
           </div>
 
           {/* Form Inputs */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
             <div>
               <label className="block text-[11px] font-bold text-neutral-600 mb-1.5 uppercase tracking-wider">
                 Full Name
@@ -91,9 +157,8 @@ export default function RegisterForm() {
               <input
                 type="text"
                 required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
+                name="name"
+                placeholder="enter your fullname"
                 className="w-full px-4 py-3.5 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-emerald-900 focus:bg-white transition-all"
               />
             </div>
@@ -105,9 +170,8 @@ export default function RegisterForm() {
               <input
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                name="email"
+                placeholder="enter your email"
                 className="w-full px-4 py-3.5 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-emerald-900 focus:bg-white transition-all"
               />
             </div>
@@ -116,15 +180,16 @@ export default function RegisterForm() {
               <label className="block text-[11px] font-bold text-neutral-600 mb-1.5 uppercase tracking-wider">
                 Password
               </label>
-              
+
               {/* Password Field with Hide/Show Toggle */}
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
+                  placeholder="password"
                   className="w-full px-4 py-3.5 pr-12 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-emerald-900 focus:bg-white transition-all"
                 />
                 <button
@@ -132,9 +197,39 @@ export default function RegisterForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none"
                 >
-                  {showPassword ? <FaEyeSlash className="text-base" /> : <FaEye className="text-base" />}
+                  {showPassword ? (
+                    <FaEyeSlash className="text-base" />
+                  ) : (
+                    <FaEye className="text-base" />
+                  )}
                 </button>
               </div>
+
+              {/* Real-time Requirement Checklist */}
+              {password.length > 0 && (
+                <div className="mt-2.5 space-y-1 px-1 transition-all">
+                  <div
+                    className={`flex items-center gap-2 text-xs font-medium transition-colors ${isMinLength ? "text-emerald-600" : "text-neutral-400"}`}
+                  >
+                    {isMinLength ? (
+                      <FaCheck className="text-[10px]" />
+                    ) : (
+                      <FaXmark className="text-[10px]" />
+                    )}
+                    <span>At least 8 characters</span>
+                  </div>
+                  <div
+                    className={`flex items-center gap-2 text-xs font-medium transition-colors ${hasSpecialChar ? "text-emerald-600" : "text-neutral-400"}`}
+                  >
+                    {hasSpecialChar ? (
+                      <FaCheck className="text-[10px]" />
+                    ) : (
+                      <FaXmark className="text-[10px]" />
+                    )}
+                    <span>Includes a special character (!@#$%...)</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
@@ -147,10 +242,23 @@ export default function RegisterForm() {
 
           {/* Footer Link */}
           <p className="text-center text-xs text-neutral-500 mt-8 font-medium">
-            Already have an account?{" "}
-            <NavLink to="/login" className="font-bold text-emerald-900 hover:underline">
+            Already have an account? // Login page
+            <button
+              className="font-bold text-emerald-900 hover:underline hover:text-blue-500"
+              onClick={() =>
+                navigate("/login", {
+                  state: location.state,
+                })
+              }
+            >
               Sign in
-            </NavLink>
+            </button>
+            {/* <NavLink
+              to="/login"
+              className="font-bold text-emerald-900 hover:underline"
+            >
+              Sign in
+            </NavLink> */}
           </p>
         </div>
       </div>

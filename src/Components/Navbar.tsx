@@ -1,9 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import { Search, User, Menu, X } from "lucide-react";
 import gsap from "gsap";
-import { FaBagShopping } from "react-icons/fa6";
+import {
+  FaArrowRightFromBracket,
+  FaBagShopping,
+  FaGear,
+  FaUser,
+} from "react-icons/fa6";
 import { useCart } from "../ContextProvider";
+import { toast } from "sonner";
+import { logout } from "../services/auth";
+import { auth } from "../firebase/firebase";
 
 interface NavItem {
   label: string;
@@ -52,6 +60,14 @@ export const Navbar: React.FC = () => {
     }
   }, [isMobileMenuOpen]);
 
+  const user = auth.currentUser;
+  const navigate = useNavigate();
+  const handleSignOut = async () => {
+    await logout();
+    navigate("/login");
+    toast.info("signout successfully !");
+  };
+console.log(user)
   return (
     <header
       ref={navbarRef}
@@ -89,10 +105,10 @@ export const Navbar: React.FC = () => {
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `anim-nav-item opacity-0 text-[15px] font-medium transition-colors duration-200 pb-1 ${
+                `anim-nav-item opacity-0 text-[15px] font-medium transition-colors duration-200 pb-1   text-nowrap ${
                   isActive
-                    ? "text-emerald-800 font-bold  border-[#0d2322]"
-                    : "text-gray-500 hover:text-gray-900"
+                    ? "text-emerald-600 font-bold  "
+                    : "text-gray-400 hover:text-emerald-900"
                 }`
               }
             >
@@ -102,26 +118,85 @@ export const Navbar: React.FC = () => {
         </nav>
 
         {/* Right Action Icons */}
-        <div className="anim-nav-item opacity-0 flex items-center gap-5 text-gray-900">
-          <button
+        <div className="anim-nav-item opacity-0 flex items-center gap-2 text-gray-900">
+         
+          {user ?
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-ghost hover:bg-emerald-100 btn-circle avatar"
+              >
+                <User className="w-5 h-5 text-emerald-700" />
+              </div>
+
+              <ul
+                tabIndex={0}
+                className="menu menu-sm dropdown-content bg-white rounded-2xl z-1 mt-3 w-60 p-2 shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-neutral-100"
+              >
+                {/* User Info Header */}
+                <div className="px-3 py-3 border-b border-neutral-100 mb-1">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    Signed in as
+                  </p>
+                  <p className="text-xs font-bold text-emerald-700 truncate mt-0.5">{user.displayName}</p>
+                </div>
+
+                {/* Links */}
+                <div className="space-y-0.5 py-1">
+                  <li>
+                    <NavLink
+                      to=""
+                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
+                    >
+                      <FaUser className="text-emerald-800 text-sm" />
+                      <span>Profile</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to=""
+                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
+                    >
+                      <FaGear className="text-emerald-800 text-sm" />
+                      <span>Settings</span>
+                    </NavLink>
+                  </li>
+                </div>
+
+                <div className="my-1 border-t border-neutral-100"></div>
+
+                {/* Logout Action */}
+                <div className="py-1">
+                  <li>
+                    <button
+                      onClick={handleSignOut}
+                      type="button"
+                      className="w-full flex items-center gap-3 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl px-3 py-2.5 transition-all text-left"
+                    >
+                      <FaArrowRightFromBracket className="text-red-500 text-sm" />
+                      Logout
+                    </button>
+                  </li>
+                </div>
+              </ul>
+            </div>
+          :<div>
+            <NavLink className='bg-emerald-800 text-white btn'  to={'/login'}>Login</NavLink>
+            </div>}
+             <button
             aria-label="Search"
-            className="hover:opacity-75 transition-opacity"
+            className="hover:opacity-75 hover:bg-emerald-100  btn btn-ghost btn-circle avatar transition-opacity"
           >
-            <Search className="w-5 h-5 text-gray-700" />
-          </button>
-          <button
-            aria-label="Account"
-            className="hover:opacity-75 transition-opacity"
-          >
-            <User className="w-5 h-5 text-gray-700" />
+            <Search className="w-5 h-5 text-emerald-700" />
           </button>
           <NavLink
             to="/Collections"
             aria-label="Cart"
-            className="hover:opacity-75 transition-opacity relative flex items-center"
+            className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity relative flex items-center"
           >
             <FaBagShopping className="text-emerald-800 w-5 h-5" />
-            <span className="absolute -top-2 -right-2 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+            <span className="absolute top-0 right-0 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
               {cart.length || 0}
             </span>
           </NavLink>

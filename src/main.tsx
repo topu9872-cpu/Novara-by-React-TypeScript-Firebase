@@ -10,10 +10,10 @@ import Shop from "./pages/Shop";
 import Collections from "./pages/Collections";
 import LoginForm from "./Components/Form/LoginForm";
 import RegisterForm from "./Components/Form/RegisterForm";
-import AboutUs from "./Components/AboutUs";
+import AboutUs from "./pages/AboutUs";
 import Blog from "./Components/Blog";
-import Contact from "./Components/Contact";
-
+import Contact from "./pages/Contact";
+import ContextProvider from "../src/ContextProvider";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -58,10 +58,12 @@ const router = createBrowserRouter([
 export default App;
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Suspense fallback={<Loading />}>
-      <Toaster />
+    <ContextProvider>
+      <Suspense fallback={<Loading />}>
+        <Toaster />
 
-      <RouterProvider router={router} />
-    </Suspense>
+        <RouterProvider router={router} />
+      </Suspense>
+    </ContextProvider>
   </StrictMode>,
 );

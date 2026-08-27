@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router";
-import { Search, User, ShoppingBag, Menu, X } from "lucide-react";
+import { Search, User, Menu, X } from "lucide-react";
 import gsap from "gsap";
+import { FaBagShopping } from "react-icons/fa6";
+import { useCart } from "../ContextProvider";
 
 interface NavItem {
   label: string;
@@ -21,6 +23,10 @@ export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Consume cart state safely from ContextProvider
+  const context = useCart() as { cart?: number[] };
+  const cart = context?.cart || [];
 
   // Initial load animation for Navbar elements
   useEffect(() => {
@@ -49,7 +55,7 @@ export const Navbar: React.FC = () => {
   return (
     <header
       ref={navbarRef}
-      className="w-full  bg-linear-to-r from-white to-amber-50  sticky top-0 z-50"
+      className="w-full bg-linear-to-r from-white to-amber-50 sticky top-0 z-50"
     >
       {/* Main Navbar Container */}
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 py-5">
@@ -83,9 +89,9 @@ export const Navbar: React.FC = () => {
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `anim-nav-item opacity-0 text-sm font-medium transition-colors duration-200 pb-1 ${
+                `anim-nav-item opacity-0 text-[15px] font-medium transition-colors duration-200 pb-1 ${
                   isActive
-                    ? "text-gray-900 font-semibold border-b-2 border-[#0d2322]"
+                    ? "text-emerald-800 font-bold  border-[#0d2322]"
                     : "text-gray-500 hover:text-gray-900"
                 }`
               }
@@ -109,15 +115,16 @@ export const Navbar: React.FC = () => {
           >
             <User className="w-5 h-5 text-gray-700" />
           </button>
-          <button
+          <NavLink
+            to="/Collections"
             aria-label="Cart"
-            className="hover:opacity-75 transition-opacity relative"
+            className="hover:opacity-75 transition-opacity relative flex items-center"
           >
-            <ShoppingBag className="w-5 h-5 text-gray-700" />
-            <span className="absolute -top-1 -right-1 bg-[#0d2322] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-              0
+            <FaBagShopping className="text-emerald-800 w-5 h-5" />
+            <span className="absolute -top-2 -right-2 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+              {cart.length || 0}
             </span>
-          </button>
+          </NavLink>
         </div>
       </div>
 

@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import gsap from "gsap";
 import { FaStar } from "react-icons/fa";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { getProducts } from "../services/productService";
 interface ProductItem {
   id: string | number;
   title: string;
@@ -14,6 +15,8 @@ interface ProductItem {
 
 export const Card: React.FC = () => {
  const containerRef = useRef<HTMLDivElement>(null);
+   const [products, setProducts] = useState<any[]>([]);
+
 const fakeProducts: ProductItem[] = [
     {
       id: 1,
@@ -80,6 +83,22 @@ useEffect(() => {
     ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
   };
 }, []);
+
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to load products:", error);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+console.log(products)
   return (
     <div className="w-full max-w-7xl mx-auto p-6">
       <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

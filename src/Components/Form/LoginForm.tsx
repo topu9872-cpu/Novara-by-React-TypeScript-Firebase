@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   FaGoogle,
   FaFacebookF,
+  FaGithub,
   FaArrowRight,
   FaEye,
   FaEyeSlash,
@@ -12,12 +13,17 @@ import { NavLink, useLocation, useNavigate } from "react-router";
 import gsap from "gsap";
 import type { User } from "../../types/User";
 import { toast } from "sonner";
-import { signIn } from "../../services/auth";
+import {
+  facebookLogin,
+  githubLogin,
+  googleLogin,
+  signIn,
+} from "../../services/auth";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
-
+const [authError, setAuthError] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
   const formElementsRef = useRef<HTMLDivElement>(null);
   const checklistRef = useRef<HTMLDivElement>(null);
@@ -70,47 +76,187 @@ export default function LoginForm() {
     }
   }, [password.length > 0]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = Object.fromEntries(
-      new FormData(e.currentTarget),
-    ) as unknown as User;
+ const handleLogin = async (
+  e: React.FormEvent<HTMLFormElement>
+) => {
+  e.preventDefault();
 
-    if (!formData.email) {
-      toast.error("Please enter your email", {
-        style: {
-          background: "#DC2626",
-          color: "#FFFFFF",
-          border: "1px solid #B91C1C",
-        },
-      });
-      return;
-    }
+  setAuthError("");
 
-    if (!isMinLength || !hasSpecialChar) {
-      toast.error(
-        "Password must be at least 8 characters and include a special character",
-        {
-          style: {
-            background: "#DC2626",
-            color: "#FFFFFF",
-            border: "1px solid #B91C1C",
-          },
-        },
+  const formData = Object.fromEntries(
+    new FormData(e.currentTarget)
+  ) as unknown as User;
+
+  if (!formData.email) {
+    setAuthError("Please enter your email address.");
+    return;
+  }
+
+  if (!isMinLength || !hasSpecialChar) {
+    setAuthError(
+      "Your password must be at least 8 characters long and include at least one special character."
+    );
+    return;
+  }
+
+  try {
+    await signIn(
+      formData.email,
+      formData.password
+    );
+
+    toast.success("Welcome back!");
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("EMAIL LOGIN ERROR:", error);
+
+    if (error.code === "auth/invalid-credential") {
+      setAuthError(
+        "The email or password you entered is incorrect. Please check your credentials and try again."
       );
       return;
     }
 
-    try {
-      await signIn(formData.email, formData.password);
-
-      toast.success("Welcome back!");
-      navigate(from, { replace: true });
-    } catch (error: any) {
-      toast.error(error.message);
+    if (error.code === "auth/user-not-found") {
+      setAuthError(
+        "No account was found with this email address."
+      );
+      return;
     }
-  };
 
+    if (error.code === "auth/wrong-password") {
+      setAuthError(
+        "The password you entered is incorrect. Please try again."
+      );
+      return;
+    }
+
+    if (error.code === "auth/too-many-requests") {
+      setAuthError(
+        "Too many unsuccessful login attempts. Please wait a moment and try again."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in. Please check your credentials and try again."
+    );
+  }
+};
+const handleGoogleLogin = async () => {
+  setAuthError("");
+
+  try {
+    await googleLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("GOOGLE ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-closed-by-user") {
+      setAuthError(
+        "The Google sign-in window was closed before the sign-in was completed."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-blocked") {
+      setAuthError(
+        "The sign-in popup was blocked by your browser. Please allow popups and try again."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with Google. Please try again."
+    );
+  }
+};
+
+const handleFacebookLogin = async () => {
+  setAuthError("");
+
+  try {
+    await facebookLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("FACEBOOK ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-closed-by-user") {
+      setAuthError(
+        "The Facebook sign-in window was closed before the sign-in was completed."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-blocked") {
+      setAuthError(
+        "The sign-in popup was blocked by your browser. Please allow popups and try again."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with Facebook. Please try again."
+    );
+  }
+};
+
+const handleGitHubLogin = async () => {
+  setAuthError("");
+
+  try {
+    await githubLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("GITHUB ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, or email account."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with GitHub. Please try again."
+    );
+  }
+};
   return (
     <section className="min-h-screen flex items-center justify-center bg-[#f7f8f6] px-4 py-12 font-sans">
       <div
@@ -132,23 +278,43 @@ export default function LoginForm() {
 
         <div ref={formElementsRef}>
           {/* Social Logins */}
-          <div className="grid grid-cols-2 gap-3.5 mb-6">
+          <div className="grid grid-cols-3 gap-2.5 mb-6">
             <button
+              onClick={handleGoogleLogin}
               type="button"
-              className="flex items-center justify-center gap-2.5 py-3 px-4 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
             >
               <FaGoogle className="text-red-500 text-sm" />
               Google
             </button>
             <button
+              onClick={handleFacebookLogin}
               type="button"
-              className="flex items-center justify-center gap-2.5 py-3 px-4 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
             >
               <FaFacebookF className="text-blue-600 text-sm" />
               Facebook
             </button>
+            <button
+              onClick={handleGitHubLogin}
+              type="button"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+            >
+              <FaGithub className="text-neutral-900 text-sm" />
+              GitHub
+            </button>
           </div>
+    {authError && (
+  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+    <p className="text-sm font-semibold text-red-700">
+      Sign-in failed
+    </p>
 
+    <p className="mt-1 text-sm text-red-600">
+      {authError}
+    </p>
+  </div>
+)}
           {/* Divider */}
           <div className="flex items-center my-6">
             <div className="grow border-t border-neutral-100"></div>
@@ -254,7 +420,7 @@ export default function LoginForm() {
 
           {/* Footer Link */}
           <p className="text-center text-xs text-neutral-500 mt-8 font-medium">
-            Don't have an account? 
+            Don't have an account?{" "}
             <button
               className="font-bold text-emerald-900 hover:underline hover:text-blue-500"
               onClick={() =>
@@ -263,14 +429,8 @@ export default function LoginForm() {
                 })
               }
             >
-               Create Account
+              Create Account
             </button>
-            {/* <NavLink
-              to="/register"
-              className="font-bold text-emerald-900 hover:underline hover:bg-blue-500"
-            >
-              Sign up
-            </NavLink> */}
           </p>
         </div>
       </div>

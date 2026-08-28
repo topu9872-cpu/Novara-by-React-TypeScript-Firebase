@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   FaGoogle,
   FaFacebookF,
+  FaGithub,
   FaArrowRight,
   FaEye,
   FaEyeSlash,
@@ -12,11 +13,12 @@ import { NavLink, useLocation, useNavigate } from "react-router";
 import gsap from "gsap";
 import type { User } from "../../types/User";
 import { toast } from "sonner";
-import { signUp } from "../../services/auth";
+import { facebookLogin, githubLogin, googleLogin, signUp } from "../../services/auth";
 
 export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+const [authError, setAuthError] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
   const formElementsRef = useRef<HTMLDivElement>(null);
@@ -101,6 +103,117 @@ export default function RegisterForm() {
     }
   };
 
+const handleGoogleLogin = async () => {
+  setAuthError("");
+
+  try {
+    await googleLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("GOOGLE ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-closed-by-user") {
+      setAuthError(
+        "The Google sign-in window was closed before the sign-in was completed."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-blocked") {
+      setAuthError(
+        "The sign-in popup was blocked by your browser. Please allow popups and try again."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with Google. Please try again."
+    );
+  }
+};
+
+const handleFacebookLogin = async () => {
+  setAuthError("");
+
+  try {
+    await facebookLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("FACEBOOK ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-closed-by-user") {
+      setAuthError(
+        "The Facebook sign-in window was closed before the sign-in was completed."
+      );
+      return;
+    }
+
+    if (error.code === "auth/popup-blocked") {
+      setAuthError(
+        "The sign-in popup was blocked by your browser. Please allow popups and try again."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with Facebook. Please try again."
+    );
+  }
+};
+const handleGitHubLogin = async () => {
+  setAuthError("");
+
+  try {
+    await githubLogin();
+
+    navigate(from, {
+      replace: true,
+    });
+  } catch (error: any) {
+    console.error("GITHUB ERROR:", error);
+
+    if (
+      error.code ===
+      "auth/account-exists-with-different-credential"
+    ) {
+      setAuthError(
+        "An account with this email already exists. Please sign in using your existing Google, Facebook, or email account."
+      );
+      return;
+    }
+
+    setAuthError(
+      "We couldn't sign you in with GitHub. Please try again."
+    );
+  }
+};
+
   return (
     <section className="min-h-screen flex items-center justify-center bg-[#f7f8f6] px-4 py-12 font-sans">
       <div
@@ -122,23 +235,43 @@ export default function RegisterForm() {
 
         <div ref={formElementsRef}>
           {/* Social Signups */}
-          <div className="grid grid-cols-2 gap-3.5 mb-6">
+          <div className="grid grid-cols-3 gap-2.5 mb-6">
             <button
+              onClick={handleGoogleLogin}
               type="button"
-              className="flex items-center justify-center gap-2.5 py-3 px-4 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
             >
               <FaGoogle className="text-red-500 text-sm" />
               Google
             </button>
             <button
+              onClick={handleFacebookLogin}
               type="button"
-              className="flex items-center justify-center gap-2.5 py-3 px-4 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
             >
               <FaFacebookF className="text-blue-600 text-sm" />
               Facebook
             </button>
+            <button
+              onClick={handleGitHubLogin}
+              type="button"
+              className="flex items-center justify-center gap-2 py-3 px-3 border border-neutral-200/80 rounded-2xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 transition-all active:scale-95"
+            >
+              <FaGithub className="text-neutral-900 text-sm" />
+              GitHub
+            </button>
           </div>
+   {authError && (
+  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+    <p className="text-sm font-semibold text-red-700">
+      Sign-in failed
+    </p>
 
+    <p className="mt-1 text-sm text-red-600">
+      {authError}
+    </p>
+  </div>
+)}
           {/* Divider */}
           <div className="flex items-center my-6">
             <div className="grow border-t border-neutral-100"></div>
@@ -242,7 +375,7 @@ export default function RegisterForm() {
 
           {/* Footer Link */}
           <p className="text-center text-xs text-neutral-500 mt-8 font-medium">
-            Already have an account? // Login page
+            Already have an account?{" "}
             <button
               className="font-bold text-emerald-900 hover:underline hover:text-blue-500"
               onClick={() =>
@@ -253,12 +386,6 @@ export default function RegisterForm() {
             >
               Sign in
             </button>
-            {/* <NavLink
-              to="/login"
-              className="font-bold text-emerald-900 hover:underline"
-            >
-              Sign in
-            </NavLink> */}
           </p>
         </div>
       </div>

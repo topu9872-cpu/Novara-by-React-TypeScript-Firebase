@@ -12,6 +12,8 @@ import { useCart } from "../ContextProvider";
 import { toast } from "sonner";
 import { logout } from "../services/auth";
 import { auth } from "../firebase/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import type { User as FirebaseUser } from "firebase/auth";
 
 interface NavItem {
   label: string;
@@ -29,14 +31,24 @@ const navItems: NavItem[] = [
 
 export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  const navbarRef = useRef<HTMLDivElement>(null);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [showSearch, setShowSearch] = useState<boolean>(false);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
 
-  // Consume cart state safely from ContextProvider
+  const navbarRef = useRef<HTMLDivElement>(null);
+  const mobileSidebarRef = useRef<HTMLDivElement>(null);
+
+  const navigate = useNavigate();
+  
   const context = useCart() as { cart?: number[] };
   const cart = context?.cart || [];
 
-  // Initial load animation for Navbar elements
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -49,66 +61,60 @@ export const Navbar: React.FC = () => {
     return () => ctx.revert();
   }, []);
 
-  // Smooth GSAP animation for mobile dropdown menu
+  // Smooth entry animation for the compact mobile panel
   useEffect(() => {
-    if (isMobileMenuOpen) {
+    if (isMobileMenuOpen && mobileSidebarRef.current) {
       gsap.fromTo(
-        mobileMenuRef.current,
-        { opacity: 0, height: 0 },
-        { opacity: 1, height: "auto", duration: 0.3, ease: "power2.out" },
+        mobileSidebarRef.current,
+        { opacity: 0, scale: 0.95, y: -10 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: "power2.out" }
       );
     }
   }, [isMobileMenuOpen]);
 
-  const user = auth.currentUser;
-  const navigate = useNavigate();
   const handleSignOut = async () => {
-    await logout();
-    navigate("/login");
-    toast.info("signout successfully !");
+    try {
+      await logout();
+      navigate("/login");
+      toast.info("Signed out successfully!");
+    } catch (error) {
+      toast.error("Failed to sign out.");
+    }
   };
-console.log(user)
+
   return (
     <header
       ref={navbarRef}
-      className="w-full bg-linear-to-r from-white to-amber-50 sticky top-0 z-50"
+      className="w-full bg-linear-to-r from-white to-amber-50 sticky top-0 z-50 shadow-xs"
     >
-      {/* Main Navbar Container */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 py-5">
-        {/* Mobile Menu Button */}
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 py-4">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="anim-nav-item opacity-0 md:hidden text-gray-800 focus:outline-none"
+          className="anim-nav-item opacity-0 md:hidden text-gray-800 focus:outline-none p-1"
           aria-label="Toggle Menu"
         >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
 
-        {/* Logo */}
         <div className="anim-nav-item opacity-0 flex items-center">
           <NavLink
             to="/"
-            className="text-2xl font-bold tracking-tight text-gray-900"
+            className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900"
           >
             Novara<span className="text-[#0d2322]">.</span>
           </NavLink>
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {navItems.map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `anim-nav-item opacity-0 text-[15px] font-medium transition-colors duration-200 pb-1   text-nowrap ${
+                `anim-nav-item opacity-0 text-[15px] font-medium transition-colors duration-200 pb-1 text-nowrap ${
                   isActive
-                    ? "text-emerald-600 font-bold  "
-                    : "text-gray-400 hover:text-emerald-900"
+                    ? "text-emerald-600 font-bold"
+                    : "text-gray-500 hover:text-emerald-900"
                 }`
               }
             >
@@ -117,10 +123,31 @@ console.log(user)
           ))}
         </nav>
 
-        {/* Right Action Icons */}
-        <div className="anim-nav-item opacity-0 flex items-center gap-2 text-gray-900">
-         
-          {user ?
+        <div className="anim-nav-item opacity-0 flex items-center gap-1 sm:gap-3 text-gray-900">
+          <div className="flex items-center relative">
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                showSearch ? "w-32 sm:w-52 opacity-100 mr-1" : "w-0 opacity-0"
+              }`}
+            >
+              <input
+                type="text"
+                placeholder="Search..."
+                className="input input-bordered input-sm w-full"
+                autoFocus={showSearch}
+              />
+            </div>
+
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              aria-label="Search"
+              className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity"
+            >
+              <Search className="w-5 h-5 text-emerald-700" />
+            </button>
+          </div>
+
+          {user ? (
             <div className="dropdown dropdown-end">
               <div
                 tabIndex={0}
@@ -134,19 +161,19 @@ console.log(user)
                 tabIndex={0}
                 className="menu menu-sm dropdown-content bg-white rounded-2xl z-1 mt-3 w-60 p-2 shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-neutral-100"
               >
-                {/* User Info Header */}
                 <div className="px-3 py-3 border-b border-neutral-100 mb-1">
                   <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                     Signed in as
                   </p>
-                  <p className="text-xs font-bold text-emerald-700 truncate mt-0.5">{user.displayName}</p>
+                  <p className="text-xs font-bold text-emerald-700 truncate mt-0.5">
+                    {user.displayName || user.email}
+                  </p>
                 </div>
 
-                {/* Links */}
                 <div className="space-y-0.5 py-1">
                   <li>
                     <NavLink
-                      to=""
+                      to="/profile"
                       className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
                     >
                       <FaUser className="text-emerald-800 text-sm" />
@@ -155,7 +182,7 @@ console.log(user)
                   </li>
                   <li>
                     <NavLink
-                      to=""
+                      to="/settings"
                       className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
                     >
                       <FaGear className="text-emerald-800 text-sm" />
@@ -166,7 +193,6 @@ console.log(user)
 
                 <div className="my-1 border-t border-neutral-100"></div>
 
-                {/* Logout Action */}
                 <div className="py-1">
                   <li>
                     <button
@@ -181,50 +207,65 @@ console.log(user)
                 </div>
               </ul>
             </div>
-          :<div>
-            <NavLink className='bg-emerald-800 text-white btn'  to={'/login'}>Login</NavLink>
-            </div>}
-             <button
-            aria-label="Search"
-            className="hover:opacity-75 hover:bg-emerald-100  btn btn-ghost btn-circle avatar transition-opacity"
-          >
-            <Search className="w-5 h-5 text-emerald-700" />
-          </button>
+          ) : (
+            <div className="hidden sm:block">
+              <NavLink className="bg-emerald-800 text-white btn btn-sm px-4" to="/login">
+                Login
+              </NavLink>
+            </div>
+          )}
+
           <NavLink
-            to="/Collections"
+            to="/cart"
             aria-label="Cart"
-            className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity relative flex items-center"
+            className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity relative flex items-center justify-center"
           >
             <FaBagShopping className="text-emerald-800 w-5 h-5" />
-            <span className="absolute top-0 right-0 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-              {cart.length || 0}
-            </span>
+            {cart.length > 0 && (
+              <span className="absolute top-1 right-1 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {cart.length}
+              </span>
+            )}
           </NavLink>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Compact Mobile Floating Dropdown / Sidebar Box */}
       {isMobileMenuOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden overflow-hidden bg-white border-b border-gray-200 px-6 py-4 space-y-3"
-        >
-          {navItems.map((item) => (
-            <NavLink
-              key={item.label}
-              to={item.to}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }: any) =>
-                `block text-base font-medium py-2 ${
-                  isActive
-                    ? "text-[#0d2322] font-semibold pl-2 border-l-4 border-[#0d2322]"
-                    : "text-gray-600 hover:text-gray-900"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+        <div className="md:hidden absolute top-full left-0 w-full px-4 py-3 z-50">
+          <div
+            ref={mobileSidebarRef}
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 space-y-2 max-h-[75vh] overflow-y-auto"
+          >
+            {navItems.map((item) => (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `block text-sm font-medium py-2.5 px-4 rounded-xl transition-colors ${
+                    isActive
+                      ? "text-emerald-700 bg-emerald-50 font-semibold"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+
+            {!user && (
+              <div className="pt-2 border-t border-gray-100 mt-2">
+                <NavLink
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full bg-emerald-800 text-white btn btn-sm text-center block py-2"
+                >
+                  Login
+                </NavLink>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </header>

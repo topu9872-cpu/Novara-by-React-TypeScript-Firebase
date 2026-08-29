@@ -1,7 +1,12 @@
 import { initializeApp } from "firebase/app";
+
 import { getAnalytics } from "firebase/analytics";
+
 import { getAuth } from "firebase/auth";
+
 import { getFirestore } from "firebase/firestore";
+
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
@@ -13,6 +18,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_GA_MEASUREMENT_ID,
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Analytics
@@ -23,3 +29,6 @@ export const db = getFirestore(app);
 
 // Authentication
 export const auth = getAuth(app);
+
+// Storage
+export const storage = getStorage(app);

@@ -17,6 +17,7 @@ import ContextProvider from "../src/ContextProvider";
 import ProductDetails from "./pages/ProductDetails";
 import Checkout from "./pages/Checkout";
 import Cart from "./pages/Cart";
+import Profile from "./pages/Profile";
 
 const router = createBrowserRouter([
   {
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
       {
         path: "/cart",
         element: <Cart />,
+      },
+      {
+        path: "/profile",
+        element: <Profile />,
       },
     ],
   },

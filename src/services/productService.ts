@@ -6,6 +6,8 @@ import {
   where,
   orderBy,
   DocumentSnapshot,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 
 
@@ -75,5 +77,20 @@ export const getAllProducts = async ({
   } catch (error) {
     console.error("Firestore Error:", error);
     return { products: [], lastDoc: null };
+  }
+};
+
+export const getProductById = async (id: string): Promise<Product | null> => {
+  try {
+    const docRef = doc(db, "Products", id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Product;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching product by ID:", error);
+    return null;
   }
 };

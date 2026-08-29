@@ -14,6 +14,10 @@ import AboutUs from "./pages/AboutUs";
 import Blog from "./Components/Blog";
 import Contact from "./pages/Contact";
 import ContextProvider from "../src/ContextProvider";
+import ProductDetails from "./pages/ProductDetails";
+import Checkout from "./pages/Checkout";
+import Cart from "./pages/Cart";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -26,6 +30,14 @@ const router = createBrowserRouter([
       {
         path: "/shop",
         element: <Shop />,
+      },
+      {
+        path: "/shop/:id",
+        element: <ProductDetails />,
+      },
+      {
+        path: "/checkout",
+        element: <Checkout />,
       },
       {
         path: "/collections",
@@ -50,6 +62,10 @@ const router = createBrowserRouter([
       {
         path: "/register",
         element: <RegisterForm />,
+      },
+      {
+        path: "/cart",
+        element: <Cart />,
       },
     ],
   },

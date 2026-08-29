@@ -17,7 +17,7 @@ const Shop = () => {
   const currentCategory = searchParams.get("category") || "all";
   const currentSort = searchParams.get("sort") || "default";
   const currentPage = Number(searchParams.get("page")) || 1;
-  const itemsPerPage = 8;
+  const itemsPerPage = 16;
 
   // 2. Fetch all products on mount
   useEffect(() => {

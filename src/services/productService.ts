@@ -1,5 +1,17 @@
-import { collection, getDocs } from "firebase/firestore";
+
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  DocumentSnapshot,
+} from "firebase/firestore";
+
+
+
 import { db } from "../firebase/firebase";
+import type { Product } from "../types/Product";
 
 export const getProducts = async () => {
   try {
@@ -13,5 +25,55 @@ export const getProducts = async () => {
   } catch (error) {
     console.error("Firestore Error:", error);
     return [];
+  }
+};
+
+
+
+interface GetProductsParams {
+  search?: string;
+  category?: string;
+  lastDoc?: DocumentSnapshot | null;
+}
+
+export const getAllProducts = async ({
+  search = "",
+  category = "all",
+}: GetProductsParams = {}) => {
+  try {
+    const constraints: any[] = [];
+
+    // Search by product name
+    if (search) {
+      constraints.push(where("name", ">=", search));
+      constraints.push(where("name", "<=", search + "\uf8ff"));
+    }
+
+    // Category filter
+    if (category !== "all") {
+      constraints.push(where("category", "==", category));
+    }
+
+    // Sort by name default
+    constraints.push(orderBy("name"));
+
+    // NOTE: Removed limit(8) here so all products in this category load,
+    // allowing your frontend pagination to calculate total pages correctly!
+
+    const q = query(collection(db, "Products"), ...constraints);
+    const snapshot = await getDocs(q);
+
+    const products = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return {
+      products: products as Product[],
+      lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+    };
+  } catch (error) {
+    console.error("Firestore Error:", error);
+    return { products: [], lastDoc: null };
   }
 };

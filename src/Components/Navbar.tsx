@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink, useNavigate, useSearchParams } from "react-router";
 import { Search, User, Menu, X } from "lucide-react";
 import gsap from "gsap";
 import {
@@ -36,7 +36,10 @@ export const Navbar: React.FC = () => {
 
   const navbarRef = useRef<HTMLDivElement>(null);
   const mobileSidebarRef = useRef<HTMLDivElement>(null);
-
+  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get("search") || "";
+  
   const navigate = useNavigate();
   
   const context = useCart() as { cart?: number[] };
@@ -82,6 +85,25 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const params = new URLSearchParams(searchParams);
+
+    if (value) {
+      params.set("search", value);
+    } else {
+      params.delete("search");
+    }
+
+    params.set("page", "1"); // Reset pagination on search change
+    setSearchParams(params);
+
+    // If user is searching from any page other than shop, redirect them to /shop
+    if (window.location.pathname !== "/shop") {
+      navigate(`/shop?${params.toString()}`);
+    }
+  };
+
   return (
     <header
       ref={navbarRef}
@@ -124,6 +146,7 @@ export const Navbar: React.FC = () => {
         </nav>
 
         <div className="anim-nav-item opacity-0 flex items-center gap-1 sm:gap-3 text-gray-900">
+          {/* Direct Search Bar with Toggle */}
           <div className="flex items-center relative">
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -132,16 +155,17 @@ export const Navbar: React.FC = () => {
             >
               <input
                 type="text"
-                placeholder="Search..."
-                className="input input-bordered input-sm w-full"
-                autoFocus={showSearch}
+                placeholder="Search products..."
+                value={search}
+                onChange={handleSearchChange}
+                className="input input-bordered input-sm w-full bg-white text-neutral-900"
               />
             </div>
 
             <button
               onClick={() => setShowSearch(!showSearch)}
-              aria-label="Search"
-              className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity"
+              className="btn btn-ghost btn-circle hover:bg-emerald-100"
+              aria-label="Toggle Search"
             >
               <Search className="w-5 h-5 text-emerald-700" />
             </button>

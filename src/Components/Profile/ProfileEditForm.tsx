@@ -170,25 +170,15 @@ export const ProfileEditForm: React.FC<Props> = ({
 
       onSuccess();
     } catch (error: any) {
-      console.error("Error:", error);
-
-      console.error("Message:", error?.message);
-
-      toast.error(error?.message || "Failed to update profile");
-    } finally {
       setSaving(false);
+  
+     
     }
   };
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* ======================================
-          AVATAR
-      ======================================= */}
+    
 
       <div className="flex flex-col items-center justify-center">
         <div className="relative group">

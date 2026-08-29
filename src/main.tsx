@@ -18,6 +18,9 @@ import ProductDetails from "./pages/ProductDetails";
 import Checkout from "./pages/Checkout";
 import Cart from "./pages/Cart";
 import Profile from "./pages/Profile";
+import { SettingsComponent } from "./pages/SettingsComponent";
+import { OrdersComponent } from "./pages/OrdersComponent";
+import { AddressesComponent } from "./pages/AddressesComponent";
 
 const router = createBrowserRouter([
   {
@@ -71,6 +74,18 @@ const router = createBrowserRouter([
       {
         path: "/profile",
         element: <Profile />,
+      },
+      {
+        path: "/settings",
+        element: <SettingsComponent />,
+      },
+      {
+        path: "/orders",
+        element: <OrdersComponent />,
+      },
+      {
+        path: "/addresses",
+        element: <AddressesComponent />,
       },
     ],
   },

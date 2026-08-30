@@ -22,7 +22,7 @@ import { SettingsComponent } from "./pages/SettingsComponent";
 import { OrdersComponent } from "./pages/OrdersComponent";
 import { AddressesComponent } from "./pages/AddressesComponent";
 import { SupportComponent } from "./pages/SupportComponent";
-import { ResetPasswordWithCode } from "./pages/ResetPasswordWithCode";
+import ForgotPassword from "./pages/ResetPasswordWithCode";
 
 const router = createBrowserRouter([
   {
@@ -95,7 +95,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/forgot-password",
-        element: <ResetPasswordWithCode />,
+        element: <ForgotPassword />,
       },
     ],
   },
@@ -106,7 +106,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ContextProvider>
       <Suspense fallback={<Loading />}>
-        <Toaster/>
+        <Toaster />
 
         <RouterProvider router={router} />
       </Suspense>

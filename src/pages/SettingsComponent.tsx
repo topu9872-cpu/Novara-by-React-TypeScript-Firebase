@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from "react";
-import {
-  type User,
-  sendPasswordResetEmail,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
+import { type User, signOut, onAuthStateChanged } from "firebase/auth";
 import {
   User as UserIcon,
   Bell,
   LogOut,
   ChevronRight,
-  Loader2,
   KeyRound,
   Package,
   MapPin,
@@ -19,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { NavLink, useNavigate } from "react-router";
 import { auth } from "../firebase/firebase";
+import { PasswordResetModal } from "./PasswordResetModal";
 
 interface Props {
   currentUser?: User | null;
@@ -33,7 +28,7 @@ export const SettingsComponent: React.FC<Props> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(
     propUser || auth.currentUser,
   );
-  const [loadingPassword, setLoadingPassword] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [emailNotif, setEmailNotif] = useState(true);
   const [smsNotif, setSmsNotif] = useState(false);
 
@@ -45,23 +40,6 @@ export const SettingsComponent: React.FC<Props> = ({
       return () => unsubscribe();
     }
   }, [propUser]);
-
-  const handlePasswordReset = async () => {
-    const email = currentUser?.email;
-    if (!email) {
-      return toast.error("No email associated with this account");
-    }
-    try {
-      setLoadingPassword(true);
-      await sendPasswordResetEmail(auth, email);
-      toast.success("Password reset email sent! Check your inbox.");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to send password reset email.");
-    } finally {
-      setLoadingPassword(false);
-    }
-  };
 
   const handleSignOut = async () => {
     try {
@@ -179,18 +157,26 @@ export const SettingsComponent: React.FC<Props> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={handlePasswordReset}
-            disabled={loadingPassword}
-            className="px-3.5 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+        
+        <button
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition-colors"
           >
-            {loadingPassword && <Loader2 size={13} className="animate-spin" />}
             Reset
           </button>
         </div>
       </div>
 
-      {/* App Preferences Section */}
+
+      <PasswordResetModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        currentUser={currentUser}
+      />
+     
+     
+
+    <div/>
       <div className="space-y-3">
         <h3 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
           Preferences

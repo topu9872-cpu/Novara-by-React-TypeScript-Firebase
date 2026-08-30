@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import { SettingsComponent } from "./pages/SettingsComponent";
 import { OrdersComponent } from "./pages/OrdersComponent";
 import { AddressesComponent } from "./pages/AddressesComponent";
+import { SupportComponent } from "./pages/SupportComponent";
 
 const router = createBrowserRouter([
   {
@@ -86,6 +87,10 @@ const router = createBrowserRouter([
       {
         path: "/addresses",
         element: <AddressesComponent />,
+      },
+      {
+        path: "/support",
+        element: <SupportComponent />,
       },
     ],
   },

@@ -22,6 +22,7 @@ import { SettingsComponent } from "./pages/SettingsComponent";
 import { OrdersComponent } from "./pages/OrdersComponent";
 import { AddressesComponent } from "./pages/AddressesComponent";
 import { SupportComponent } from "./pages/SupportComponent";
+import { ResetPasswordWithCode } from "./pages/ResetPasswordWithCode";
 
 const router = createBrowserRouter([
   {
@@ -91,6 +92,10 @@ const router = createBrowserRouter([
       {
         path: "/support",
         element: <SupportComponent />,
+      },
+      {
+        path: "/forgot-password",
+        element: <ResetPasswordWithCode />,
       },
     ],
   },

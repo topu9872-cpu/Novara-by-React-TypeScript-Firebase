@@ -1,4 +1,3 @@
-
 import {
   collection,
   getDocs,
@@ -9,8 +8,6 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-
-
 
 import { db } from "../firebase/firebase";
 import type { Product } from "../types/Product";
@@ -29,8 +26,6 @@ export const getProducts = async () => {
     return [];
   }
 };
-
-
 
 interface GetProductsParams {
   search?: string;
@@ -58,9 +53,6 @@ export const getAllProducts = async ({
 
     // Sort by name default
     constraints.push(orderBy("name"));
-
-    // NOTE: Removed limit(8) here so all products in this category load,
-    // allowing your frontend pagination to calculate total pages correctly!
 
     const q = query(collection(db, "Products"), ...constraints);
     const snapshot = await getDocs(q);

@@ -8,7 +8,7 @@ import {
   FaGear,
   FaUser,
 } from "react-icons/fa6";
-import { useCart } from "../ContextProvider";
+import { useCart, type CartItem } from "../ContextProvider";
 import { toast } from "sonner";
 import { logout } from "../services/auth";
 import { auth } from "../firebase/firebase";
@@ -42,7 +42,7 @@ export const Navbar: React.FC = () => {
   
   const navigate = useNavigate();
   
-  const context = useCart() as { cart?: number[] };
+const context = useCart() as { cart?: CartItem[] };
   const cart = context?.cart || [];
 
   useEffect(() => {

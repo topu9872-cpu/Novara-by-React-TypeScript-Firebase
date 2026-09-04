@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FaBagShopping, FaXmark, FaTrash, FaArrowRight } from "react-icons/fa6";
 import gsap from "gsap";
-import { useCart } from "../ContextProvider";
+import { useCart, type CartItem } from "../ContextProvider";
 
 const initialProducts = [
   {
@@ -101,34 +101,57 @@ const initialProducts = [
 
 export default function Collections() {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeQuickViewId, setActiveQuickViewId] = useState<number | null>(null);
+  const [activeQuickViewId, setActiveQuickViewId] = useState<number | null>(
+    null,
+  );
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Consume context safely with full flexibility for different provider patterns
-  const context = useCart() as {
-    cart?: number[];
-    setCart?: React.Dispatch<React.SetStateAction<number[]>>;
-    addToCart?: (id: number) => void;
-    removeFromCart?: (id: number) => void;
-    toggleCartItem?: (id: number) => void;
+  const context = useCart() as unknown as {
+    cart?: CartItem[];
+    setCart?: React.Dispatch<React.SetStateAction<CartItem[]>>;
+    addToCart?: (product: CartItem) => void;
+    removeFromCart?: (id: string | number) => void;
+    toggleCartItem?: (product: CartItem) => void;
   };
-
   const cartItems = context?.cart || [];
 
   // Safe handler supporting multiple Context shapes
-  const handleToggleCart = (id: number) => {
-    const isAlreadyAdded = cartItems.includes(id);
+  const handleToggleCart = (productData: (typeof initialProducts)[0]) => {
+    const targetId = productData.id;
+
+    // Map local mock product shape to match standard CartItem shape
+    const productItem: CartItem = {
+      id: productData.id,
+      name: productData.title,
+      price: productData.price,
+      image: productData.image,
+      quantity: 1,
+    };
+
+    const isAlreadyAdded = cartItems.some(
+      (item) => Number(item.id || item.id) === Number(targetId),
+    );
 
     if (typeof context?.toggleCartItem === "function") {
-      context.toggleCartItem(id);
-    } else if (isAlreadyAdded && typeof context?.removeFromCart === "function") {
-      context.removeFromCart(id);
+      context.toggleCartItem(productItem);
+    } else if (
+      isAlreadyAdded &&
+      typeof context?.removeFromCart === "function"
+    ) {
+      context.removeFromCart(targetId);
     } else if (!isAlreadyAdded && typeof context?.addToCart === "function") {
-      context.addToCart(id);
+      context.addToCart(productItem);
     } else if (typeof context?.setCart === "function") {
-      context.setCart((prev = []) =>
-        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-      );
+      context.setCart((prev: CartItem[] = []): CartItem[] => {
+        if (isAlreadyAdded) {
+          return prev.filter(
+            (item) => Number(item.id || item.id) !== Number(targetId),
+          );
+        } else {
+          return [...prev, productItem];
+        }
+      });
     }
   };
 
@@ -186,8 +209,11 @@ export default function Collections() {
     setActiveQuickViewId(activeQuickViewId === id ? null : id);
   };
 
-  const cartProducts = initialProducts.filter((p) => cartItems.includes(p.id));
-  const totalPrice = cartProducts.reduce((sum, item) => sum + item.price, 0);
+  const cartProducts = cartItems;
+  const totalPrice = cartItems.reduce(
+    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+    0,
+  );
 
   return (
     <div className="bg-[#f7f8f6] min-h-screen py-16 px-4 font-sans text-neutral-900 relative">
@@ -253,7 +279,9 @@ export default function Collections() {
         >
           {filteredProducts.map((product) => {
             const isQuickView = activeQuickViewId === product.id;
-            const isAdded = cartItems.includes(product.id);
+            const isAdded = cartItems.some(
+              (item) => Number(item.id || item.id) === Number(product.id),
+            );
 
             return (
               <div
@@ -328,7 +356,7 @@ export default function Collections() {
                   </button>
 
                   <button
-                    onClick={() => handleToggleCart(product.id)}
+                    onClick={() => handleToggleCart(product)}
                     className={`flex-1 text-center text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer ${
                       isAdded
                         ? "bg-emerald-900 text-white shadow-sm"
@@ -384,33 +412,47 @@ export default function Collections() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {cartProducts.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 p-3 rounded-2xl bg-[#f7f8f6] border border-neutral-100"
-                    >
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-16 h-16 object-cover rounded-xl shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-neutral-900 truncate">
-                          {item.title}
-                        </h4>
-                        <p className="text-xs font-extrabold text-emerald-900 mt-0.5">
-                          {item.formattedPrice}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleToggleCart(item.id)}
-                        className="w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Remove item"
+                  {cartProducts.map((item, idx) => {
+                    const originalProduct = initialProducts.find(
+                      (p) => Number(p.id) === Number(item.id || item.id),
+                    );
+
+                    return (
+                      <div
+                        key={`${item.id || item.id}-${idx}`}
+                        className="flex items-center gap-4 p-3 rounded-2xl bg-[#f7f8f6] border border-neutral-100"
                       >
-                        <FaTrash className="text-xs" />
-                      </button>
-                    </div>
-                  ))}
+                        <img
+                          src={item.image || originalProduct?.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-xl shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-neutral-900 truncate">
+                            {item.name}
+                          </h4>
+                          <p className="text-xs font-extrabold text-emerald-900 mt-0.5">
+                            ${Number(item.price || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (originalProduct) {
+                              handleToggleCart(originalProduct);
+                            } else if (
+                              typeof context?.removeFromCart === "function"
+                            ) {
+                              context.removeFromCart(item.id || item.id!);
+                            }
+                          }}
+                          className="w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <FaTrash className="text-xs" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

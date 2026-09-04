@@ -23,6 +23,7 @@ import { OrdersComponent } from "./pages/OrdersComponent";
 import { AddressesComponent } from "./pages/AddressesComponent";
 import { SupportComponent } from "./pages/SupportComponent";
 import ForgotPassword from "./pages/ResetPasswordWithCode";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const router = createBrowserRouter([
   {
@@ -96,6 +97,10 @@ const router = createBrowserRouter([
       {
         path: "/forgot-password",
         element: <ForgotPassword />,
+      },
+      {
+        path: "/payment-success",
+        element: <PaymentSuccess />,
       },
     ],
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import {
   ShoppingCart,
   ArrowLeft,
@@ -20,11 +20,13 @@ const ProductDetails: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
-  const location = useLocation();
 
   // Safely extract addToCart from your global context
   const { addToCart } = useCart() as unknown as {
-    addToCart?: (product: Product & { quantity?: number }, qty?: number) => void;
+    addToCart?: (
+      product: Product & { quantity?: number },
+      qty?: number,
+    ) => void;
   };
 
   useEffect(() => {
@@ -55,6 +57,8 @@ const ProductDetails: React.FC = () => {
     }
   };
 
+  console.log(quantity, product);
+
   const user = auth.currentUser;
 
   const handleBuyNow = () => {
@@ -64,14 +68,20 @@ const ProductDetails: React.FC = () => {
       });
       return;
     }
+
     if (!product) return;
 
     if (addToCart) {
       addToCart({ ...product, quantity }, quantity);
     }
-    navigate("/checkout");
-  };
 
+    navigate("/checkout", {
+      state: {
+        product,
+        quantity,
+      },
+    });
+  };
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-neutral-500 font-medium">

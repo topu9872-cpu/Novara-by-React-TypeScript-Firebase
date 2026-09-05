@@ -2,14 +2,16 @@ import { setGlobalOptions } from "firebase-functions";
 import { onRequest } from "firebase-functions/v2/https";
 import Stripe from "stripe";
 import cors from "cors";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-setGlobalOptions({
-  maxInstances: 10,
-});
+initializeApp();
 
-const corsHandler = cors({
-  origin: true,
-});
+const db = getFirestore();
+
+setGlobalOptions({ maxInstances: 10 });
+
+const corsHandler = cors({ origin: true });
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -20,15 +22,10 @@ if (!stripeSecretKey) {
 const stripe = new Stripe(stripeSecretKey);
 
 export const createCheckoutSession = onRequest(
-  {
-    region: "asia-southeast1",
-  },
+  { region: "asia-southeast1" ,cors: true,},
   async (req, res) => {
     corsHandler(req, res, async () => {
       try {
-        // -----------------------------------------
-        // METHOD CHECK
-        // -----------------------------------------
         if (req.method !== "POST") {
           res.status(405).json({
             success: false,
@@ -37,140 +34,98 @@ export const createCheckoutSession = onRequest(
           return;
         }
 
-        // -----------------------------------------
-        // REQUEST DATA
-        // -----------------------------------------
+        const { product, email, displayName, userId, phoneNumber } = req.body;
 
-        const {
-          productName,
-          productPrice,
-          quantity = 1,
-          email,
-          displayName,
-        } = req.body;
-
-        // -----------------------------------------
-        // VALIDATE PRODUCT
-        // -----------------------------------------
-
-        if (!productName || productPrice === undefined) {
+        if (!Array.isArray(product) || !product.length) {
           res.status(400).json({
             success: false,
-            message: "Product name and price are required.",
+            message: "Products are required.",
           });
           return;
         }
 
-        // -----------------------------------------
-        // VALIDATE EMAIL
-        // -----------------------------------------
-
-        if (!email || typeof email !== "string") {
+        if (!email) {
           res.status(400).json({
             success: false,
-            message: "User email is required.",
+            message: "Email is required.",
           });
           return;
         }
 
-        // -----------------------------------------
-        // PRICE & QUANTITY
-        // -----------------------------------------
-
-        const price = Number(productPrice);
-        const qty = Number(quantity);
-
-        if (!Number.isFinite(price) || price <= 0) {
+        if (!userId) {
           res.status(400).json({
             success: false,
-            message: "Invalid product price.",
+            message: "User ID is required.",
           });
           return;
         }
 
-        if (!Number.isInteger(qty) || qty <= 0) {
-          res.status(400).json({
-            success: false,
-            message: "Invalid quantity.",
-          });
-          return;
-        }
+        const lineItems = product.map((item: any) => {
+          const name = String(item?.name || "").trim();
+          const price = Number(item?.price);
+          const quantity = Number(item?.quantity || 1);
 
-        // -----------------------------------------
-        // FRONTEND URL
-        // -----------------------------------------
+          if (!name) throw new Error("Product name is missing.");
+          if (!Number.isFinite(price) || price <= 0) {
+            throw new Error(`Invalid price for product: ${name}`);
+          }
+          if (!Number.isInteger(quantity) || quantity <= 0) {
+            throw new Error(`Invalid quantity for product: ${name}`);
+          }
+
+          return {
+            price_data: {
+              currency: "usd",
+              product_data: { name },
+              unit_amount: Math.round(price * 100),
+            },
+            quantity,
+          };
+        });
+
+        lineItems.push({
+          price_data: {
+            currency: "usd",
+            product_data: { name: "Priority Shipping" },
+            unit_amount: 500,
+          },
+          quantity: 1,
+        });
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-        // -----------------------------------------
-        // CREATE STRIPE CHECKOUT SESSION
-        // -----------------------------------------
-
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
-
           payment_method_types: ["card"],
-
-          // Automatically fills Stripe's
-          // Contact information → Email field
           customer_email: email,
-
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-
-                product_data: {
-                  name: String(productName),
-                },
-
-                unit_amount: Math.round(price * 100),
-              },
-
-              quantity: qty,
-            },
-          ],
-
-          // -----------------------------------------
-          // USER / ORDER METADATA
-          // -----------------------------------------
+          line_items: lineItems,
 
           metadata: {
-            price: String(price),
-
-            quantity: String(qty),
-
-            productName: String(productName),
-
-            email: email,
-
-            displayName: displayName ? String(displayName) : "",
+            userId: String(userId),
+            email: String(email),
+            displayName: String(displayName || ""),
+            phoneNumber: String(phoneNumber || ""),
+            products: JSON.stringify(
+              product.map((item: any) => ({
+                id: item.id || item._id || "",
+                name: item.name || "",
+                price: Number(item.price) || 0,
+                quantity: Number(item.quantity || 1),
+                image: item.image || "",
+              })),
+            ),
           },
-
-          // -----------------------------------------
-          // SUCCESS URL
-          // -----------------------------------------
 
           success_url:
             `${frontendUrl}/payment-success` +
             `?session_id={CHECKOUT_SESSION_ID}`,
 
-          // -----------------------------------------
-          // CANCEL URL
-          // -----------------------------------------
-
           cancel_url: `${frontendUrl}/checkout`,
         });
 
-        // -----------------------------------------
-        // RESPONSE
-        // -----------------------------------------
-
         res.status(200).json({
           success: true,
-
           sessionId: session.id,
-
           url: session.url,
         });
       } catch (error) {
@@ -178,7 +133,10 @@ export const createCheckoutSession = onRequest(
 
         res.status(500).json({
           success: false,
-          message: "Unable to create Stripe checkout session.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to create Stripe checkout session.",
         });
       }
     });
@@ -186,9 +144,7 @@ export const createCheckoutSession = onRequest(
 );
 
 export const verifyCheckoutSession = onRequest(
-  {
-    region: "asia-southeast1",
-  },
+  { region: "asia-southeast1" ,cors: true,},
   async (req, res) => {
     corsHandler(req, res, async () => {
       try {
@@ -220,34 +176,75 @@ export const verifyCheckoutSession = onRequest(
           return;
         }
 
+        let products: any[] = [];
+
+        try {
+          products = session.metadata?.products
+            ? JSON.parse(session.metadata.products)
+            : [];
+        } catch {
+          console.error("Product JSON parse error");
+        }
+
+        const userId = session.metadata?.userId || "";
+
+        const email =
+          session.customer_email ||
+          session.customer_details?.email ||
+          session.metadata?.email ||
+          "";
+
+        const displayName =
+          session.metadata?.displayName || session.customer_details?.name || "";
+
+        const phoneNumber = session.metadata?.phoneNumber || "";
+
+        const amount = session.amount_total ? session.amount_total / 100 : 0;
+
+        const currency = session.currency || "usd";
+
+        const orderData = {
+          userId,
+          sessionId: session.id,
+          email,
+          displayName,
+          phoneNumber,
+          amount,
+          currency,
+          paymentStatus: session.payment_status,
+          products,
+          createdAt: FieldValue.serverTimestamp(),
+        };
+
+        const orderRef = db.collection("orders").doc(session.id);
+
+        const existingOrder = await orderRef.get();
+
+        if (!existingOrder.exists) {
+          await orderRef.set(orderData);
+        }
+
         res.status(200).json({
           success: true,
-
           sessionId: session.id,
-
-          email:
-            session.customer_details?.email ||
-            session.customer_email ||
-            session.metadata?.email ||
-            "",
-
-          displayName:
-            session.metadata?.displayName ||
-            session.customer_details?.name ||
-            "",
-
-          amount: session.amount_total ? session.amount_total / 100 : 0,
-
-          currency: session.currency || "usd",
-
+          email,
+          displayName,
+          phoneNumber,
+          userId,
+          amount,
+          currency,
           paymentStatus: session.payment_status,
+          products,
         });
       } catch (error) {
         console.error("Stripe Verify Error:", error);
 
         res.status(500).json({
           success: false,
-          message: "Unable to verify Stripe payment.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to verify Stripe payment.",
         });
       }
     });

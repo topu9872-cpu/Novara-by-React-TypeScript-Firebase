@@ -59,7 +59,6 @@ const Subscribe: React.FC<NewsletterBannerProps> = ({
         onSubscribe(email);
        
       } else {
-        console.log('Subscribed with email:', email);
       }
       setEmail('');
     }

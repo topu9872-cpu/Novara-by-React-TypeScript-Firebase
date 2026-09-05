@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { useSearchParams } from "react-router";
+import { NavLink, useSearchParams } from "react-router";
 import gsap from "gsap";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 
@@ -12,6 +12,8 @@ interface PaymentData {
   amount: number;
   currency: string;
   paymentStatus: string;
+  productImage: string;
+  productTitle: string;
 }
 
 const VERIFY_URL =
@@ -44,6 +46,7 @@ const PaymentSuccess = () => {
         setError("");
 
         const url = `${VERIFY_URL}?session_id=${encodeURIComponent(sessionId)}`;
+
         const response = await fetch(url);
         const data = await response.json();
 
@@ -54,6 +57,7 @@ const PaymentSuccess = () => {
         setPaymentData(data);
       } catch (error) {
         console.error("Payment verification error:", error);
+
         setError(
           error instanceof Error ? error.message : "Unable to verify payment.",
         );
@@ -64,7 +68,6 @@ const PaymentSuccess = () => {
 
     verifyPayment();
   }, [sessionId]);
-
   // -----------------------------------------
   // GSAP ANIMATIONS (Slide in from right)
   // -----------------------------------------
@@ -96,7 +99,7 @@ const PaymentSuccess = () => {
   }, [loading]);
 
   const cardNumber = "•••• •••• •••• 4242";
-  const expiryDate = "12 / 28";
+  const expiryDate = new Date().toLocaleString();
   const cardName = paymentData?.displayName || "VALUED CUSTOMER";
   const amountPaid = paymentData?.amount
     ? `$${paymentData.amount.toFixed(2)} ${paymentData.currency?.toUpperCase() || "USD"}`
@@ -128,215 +131,225 @@ const PaymentSuccess = () => {
   }
 
   return (
-    <StyledWrapper ref={containerRef}>
-      <div className="success-container">
-        {/* Success Icon Badge */}
-        <div className="success-badge">
-          <CheckCircle2 size={32} />
-        </div>
+    <>
+      <StyledWrapper ref={containerRef}>
+        <div className="success-container">
+          {/* Success Icon Badge */}
+          <div className="success-badge">
+            <CheckCircle2 size={32} />
+          </div>
 
-        {/* Credit Card Component (Starts showing front side by default) */}
-        <div className="card-wrapper" ref={cardRef}>
-          <div className="flip-card">
-            <div className="flip-card-inner">
-              {/* FRONT SIDE (Shown by default) */}
-              <div className="flip-card-front">
-                <p className="heading_8264">MASTERCARD</p>
-                <svg
-                  className="logo"
-                  xmlns="http://www.w3.org/2000/svg"
-                  x="0px"
-                  y="0px"
-                  width={36}
-                  height={36}
-                  viewBox="0 0 48 48"
-                >
-                  <path
-                    fill="#ff9800"
-                    d="M32 10A14 14 0 1 0 32 38A14 14 0 1 0 32 10Z"
-                  />
-                  <path
-                    fill="#d50000"
-                    d="M16 10A14 14 0 1 0 16 38A14 14 0 1 0 16 10Z"
-                  />
-                  <path
-                    fill="#ff3d00"
-                    d="M18,24c0,4.755,2.376,8.95,6,11.48c3.624-2.53,6-6.725,6-11.48s-2.376-8.95-6-11.48 C20.376,15.05,18,19.245,18,24z"
-                  />
-                </svg>
-                <svg
-                  version="1.1"
-                  className="chip"
-                  id="Layer_1"
-                  xmlns="http://www.w3.org/2000/svg"
-                  xmlnsXlink="http://www.w3.org/1999/xlink"
-                  x="0px"
-                  y="0px"
-                  width="30px"
-                  height="30px"
-                  viewBox="0 0 50 50"
-                  xmlSpace="preserve"
-                >
-                  <image
-                    id="image0"
-                    width={50}
-                    height={50}
-                    x={0}
-                    y={0}
-                    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAABGdBTUEAALGPC/xhBQAAACBjSFJN AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAB6VBMVEUAAACNcTiVeUKVeUOY fEaafEeUeUSYfEWZfEaykleyklaXe0SWekSZZjOYfEWYe0WXfUWXe0WcgEicfkiXe0SVekSXekSW ekKYe0a9nF67m12ZfUWUeEaXfESVekOdgEmVeUWWekSniU+VeUKVeUOrjFKYfEWliE6WeESZe0GS e0WYfES7ml2Xe0WXeESUeEOWfEWcf0eWfESXe0SXfEWYekSVeUKXfEWxklawkVaZfEWWekOUekOW ekSYfESZe0eXekWYfEWZe0WZe0eVeUSWeETAnmDCoWLJpmbxy4P1zoXwyoLIpWbjvXjivnjgu3bf u3beunWvkFWxkle/nmDivXiWekTnwXvkwHrCoWOuj1SXe0TEo2TDo2PlwHratnKZfEbQrWvPrWua fUfbt3PJp2agg0v0zYX0zYSfgkvKp2frxX7mwHrlv3rsxn/yzIPgvHfduXWXe0XuyIDzzISsjVO1 lVm0lFitjVPzzIPqxX7duna0lVncuHTLqGjvyIHeuXXxyYGZfUayk1iyk1e2lln1zYTEomO2llrb tnOafkjFpGSbfkfZtXLhvHfkv3nqxH3mwXujhU3KqWizlFilh06khk2fgkqsjlPHpWXJp2erjVOh g0yWe0SliE+XekShhEvAn2D///+gx8TWAAAARnRSTlMACVCTtsRl7Pv7+vxkBab7pZv5+ZlL/UnU /f3SJCVe+Fx39naA9/75XSMh0/3SSkia+pil/KRj7Pr662JPkrbP7OLQ0JFOijI1MwAAAAFiS0dE orDd34wAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfnAg0IDx2lsiuJAAACLElEQVRIx2Ng GAXkAUYmZhZWPICFmYkRVQcbOwenmzse4MbFzc6DpIGXj8PD04sA8PbhF+CFaxEU8iWkAQT8hEVg OkTF/InR4eUVICYO1SIhCRMLDAoKDvFDVhUaEhwUFAjjSUlDdMiEhcOEItzdI6OiYxA6YqODIt3d I2DcuDBZsBY5eVTr4xMSYcyk5BRUOXkFsBZFJTQnp6alQxgZmVloUkrKYC0qqmji2WE5EEZuWB6a /KoKdi35YQUQRkFYPpFaCouKIYzi6EDitJSUlsGY5RWVRGjJLyxNy4ZxqtIqqvOxaVELQwZFZdkI JVU1RSiSalAt6rUxUBdWG1CP6pT6gNqwOrgCdQyHNYR5YQFhDXj8MiK1IAeyN6aORiyBjByVTS0F qBoKWpqwRCVSgilOaY2OaUPw29qjOzqLvTAachpos47u6EZyYnngUSRwpuTe6D+6qaFQdOPNLRzOM 1dzhRZyW+CZouHk3dWLXglFcFIflQhj9YWjJGlZcaKAVSysjyPrRQ0oQVKDAQHlYFYUwIm4gqExGm BSkutaVQJeomwViTJqPK6OhCy2Q9sQBk8cY0DxjTJw0lAQWK6cOKfgNhpKK7ZMpUeF3jPa28BCET amiEqJKM+X1gxvWXpoUjVIVPnwErw71nmpgiqiQGBjNzbgs3j1nus+fMndc+Cwm0T52/oNR9lsdC S24ra7Tq1cbWjpXV3sHRCb1idXZ0sGdltXNxRateRwHRAACYHutzk/2I5QAAACV0RVh0ZGF0ZTpj cmVhdGUAMjAyMy0wMi0xM1QwODoxMToyOSswMDkoMEUnN7UAAAAldEVYdGRhdGU6bW9kaWZ5ADIw MjMtMoJNUMDg6MTU6MjkrMDA6MDA0eo8JAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDIzLTAy LTEzTDA4OjE5OjI5KzAwOjAwY2+u1gAAAABJRU5ErkJggg=="
-                  />
-                </svg>
-                <svg
-                  className="chip"
-                  width="46"
-                  height="34"
-                  viewBox="0 0 70 50"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <defs>
-                    {/* Metallic gold */}
-                    <linearGradient id="chipGold" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#FFF4B0" />
-                      <stop offset="18%" stopColor="#E8C45A" />
-                      <stop offset="42%" stopColor="#C89B25" />
-                      <stop offset="65%" stopColor="#F1D66F" />
-                      <stop offset="82%" stopColor="#B27A08" />
-                      <stop offset="100%" stopColor="#E6BE43" />
-                    </linearGradient>
-
-                    {/* Metallic shine */}
-                    <linearGradient
-                      id="chipHighlight"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor="#FFFFFF"
-                        stopOpacity="0.42"
-                      />
-                      <stop
-                        offset="35%"
-                        stopColor="#FFFFFF"
-                        stopOpacity="0.08"
-                      />
-                      <stop
-                        offset="70%"
-                        stopColor="#7A5200"
-                        stopOpacity="0.08"
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor="#6A4300"
-                        stopOpacity="0.22"
-                      />
-                    </linearGradient>
-
-                    <filter id="chipShadow">
-                      <feDropShadow
-                        dx="0"
-                        dy="1"
-                        stdDeviation="1"
-                        floodOpacity="0.3"
-                      />
-                    </filter>
-                  </defs>
-
-                  {/* Real chip body */}
-                  <rect
-                    x="2"
-                    y="2"
-                    width="66"
-                    height="46"
-                    rx="9"
-                    fill="url(#chipGold)"
-                    filter="url(#chipShadow)"
-                  />
-
-                  {/* Metallic surface */}
-                  <rect
-                    x="2"
-                    y="2"
-                    width="66"
-                    height="46"
-                    rx="9"
-                    fill="url(#chipHighlight)"
-                  />
-
-                  {/* EMV etched contacts */}
-                  <g
-                    fill="none"
-                    stroke="#87620A"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          {/* Credit Card Component (Starts showing front side by default) */}
+          <div className="card-wrapper" ref={cardRef}>
+            <div className="flip-card">
+              <div className="flip-card-inner">
+                {/* FRONT SIDE (Shown by default) */}
+                <div className="flip-card-front">
+                  <p className="heading_8264">MASTERCARD</p>
+                  <svg
+                    className="logo"
+                    xmlns="http://www.w3.org/2000/svg"
+                    x="0px"
+                    y="0px"
+                    width={36}
+                    height={36}
+                    viewBox="0 0 48 48"
                   >
-                    {/* Left contacts */}
-                    <path d="M2 16H15C18 16 20 18 20 21V25" />
-                    <path d="M2 34H15C18 34 20 32 20 29V25" />
+                    <path
+                      fill="#ff9800"
+                      d="M32 10A14 14 0 1 0 32 38A14 14 0 1 0 32 10Z"
+                    />
+                    <path
+                      fill="#d50000"
+                      d="M16 10A14 14 0 1 0 16 38A14 14 0 1 0 16 10Z"
+                    />
+                    <path
+                      fill="#ff3d00"
+                      d="M18,24c0,4.755,2.376,8.95,6,11.48c3.624-2.53,6-6.725,6-11.48s-2.376-8.95-6-11.48 C20.376,15.05,18,19.245,18,24z"
+                    />
+                  </svg>
+                  <svg
+                    version="1.1"
+                    className="chip"
+                    id="Layer_1"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlnsXlink="http://www.w3.org/1999/xlink"
+                    x="0px"
+                    y="0px"
+                    width="30px"
+                    height="30px"
+                    viewBox="0 0 50 50"
+                    xmlSpace="preserve"
+                  >
+                    <image
+                      id="image0"
+                      width={50}
+                      height={50}
+                      x={0}
+                      y={0}
+                      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAABGdBTUEAALGPC/xhBQAAACBjSFJN AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAB6VBMVEUAAACNcTiVeUKVeUOY fEaafEeUeUSYfEWZfEaykleyklaXe0SWekSZZjOYfEWYe0WXfUWXe0WcgEicfkiXe0SVekSXekSW ekKYe0a9nF67m12ZfUWUeEaXfESVekOdgEmVeUWWekSniU+VeUKVeUOrjFKYfEWliE6WeESZe0GS e0WYfES7ml2Xe0WXeESUeEOWfEWcf0eWfESXe0SXfEWYekSVeUKXfEWxklawkVaZfEWWekOUekOW ekSYfESZe0eXekWYfEWZe0WZe0eVeUSWeETAnmDCoWLJpmbxy4P1zoXwyoLIpWbjvXjivnjgu3bf u3beunWvkFWxkle/nmDivXiWekTnwXvkwHrCoWOuj1SXe0TEo2TDo2PlwHratnKZfEbQrWvPrWua fUfbt3PJp2agg0v0zYX0zYSfgkvKp2frxX7mwHrlv3rsxn/yzIPgvHfduXWXe0XuyIDzzISsjVO1 lVm0lFitjVPzzIPqxX7duna0lVncuHTLqGjvyIHeuXXxyYGZfUayk1iyk1e2lln1zYTEomO2llrb tnOafkjFpGSbfkfZtXLhvHfkv3nqxH3mwXujhU3KqWizlFilh06khk2fgkqsjlPHpWXJp2erjVOh g0yWe0SliE+XekShhEvAn2D///+gx8TWAAAARnRSTlMACVCTtsRl7Pv7+vxkBab7pZv5+ZlL/UnU /f3SJCVe+Fx39naA9/75XSMh0/3SSkia+pil/KRj7Pr662JPkrbP7OLQ0JFOijI1MwAAAAFiS0dE orDd34wAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfnAg0IDx2lsiuJAAACLElEQVRIx2Ng GAXkAUYmZhZWPICFmYkRVQcbOwenmzse4MbFzc6DpIGXj8PD04sA8PbhF+CFaxEU8iWkAQT8hEVg OkTF/InR4eUVICYO1SIhCRMLDAoKDvFDVhUaEhwUFAjjSUlDdMiEhcOEItzdI6OiYxA6YqODIt3d I2DcuDBZsBY5eVTr4xMSYcyk5BRUOXkFsBZFJTQnp6alQxgZmVloUkrKYC0qqmji2WE5EEZuWB6a /KoKdi35YQUQRkFYPpFaCouKIYzi6EDitJSUlsGY5RWVRGjJLyxNy4ZxqtIqqvOxaVELQwZFZdkI JVU1RSiSalAt6rUxUBdWG1CP6pT6gNqwOrgCdQyHNYR5YQFhDXj8MiK1IAeyN6aORiyBjByVTS0F qBoKWpqwRCVSgilOaY2OaUPw29qjOzqLvTAachpos47u6EZyYnngUSRwpuTe6D+6qaFQdOPNLRzOM 1dzhRZyW+CZouHk3dWLXglFcFIflQhj9YWjJGlZcaKAVSysjyPrRQ0oQVKDAQHlYFYUwIm4gqExGm BSkutaVQJeomwViTJqPK6OhCy2Q9sQBk8cY0DxjTJw0lAQWK6cOKfgNhpKK7ZMpUeF3jPa28BCET amiEqJKM+X1gxvWXpoUjVIVPnwErw71nmpgiqiQGBjNzbgs3j1nus+fMndc+Cwm0T52/oNR9lsdC S24ra7Tq1cbWjpXV3sHRCb1idXZ0sGdltXNxRateRwHRAACYHutzk/2I5QAAACV0RVh0ZGF0ZTpj cmVhdGUAMjAyMy0wMi0xM1QwODoxMToyOSswMDkoMEUnN7UAAAAldEVYdGRhdGU6bW9kaWZ5ADIw MjMtMoJNUMDg6MTU6MjkrMDA6MDA0eo8JAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDIzLTAy LTEzTDA4OjE5OjI5KzAwOjAwY2+u1gAAAABJRU5ErkJggg=="
+                    />
+                  </svg>
+                  <svg
+                    className="chip"
+                    width="46"
+                    height="34"
+                    viewBox="0 0 70 50"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <defs>
+                      {/* Metallic gold */}
+                      <linearGradient id="chipGold" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#FFF4B0" />
+                        <stop offset="18%" stopColor="#E8C45A" />
+                        <stop offset="42%" stopColor="#C89B25" />
+                        <stop offset="65%" stopColor="#F1D66F" />
+                        <stop offset="82%" stopColor="#B27A08" />
+                        <stop offset="100%" stopColor="#E6BE43" />
+                      </linearGradient>
 
-                    {/* Right contacts */}
-                    <path d="M68 16H55C52 16 50 18 50 21V25" />
-                    <path d="M68 34H55C52 34 50 32 50 29V25" />
+                      {/* Metallic shine */}
+                      <linearGradient
+                        id="chipHighlight"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#FFFFFF"
+                          stopOpacity="0.42"
+                        />
+                        <stop
+                          offset="35%"
+                          stopColor="#FFFFFF"
+                          stopOpacity="0.08"
+                        />
+                        <stop
+                          offset="70%"
+                          stopColor="#7A5200"
+                          stopOpacity="0.08"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#6A4300"
+                          stopOpacity="0.22"
+                        />
+                      </linearGradient>
 
-                    {/* Top contacts */}
-                    <path d="M18 2V10C18 13 20 16 23 16H35" />
-                    <path d="M52 2V10C52 13 50 16 47 16H35" />
+                      <filter id="chipShadow">
+                        <feDropShadow
+                          dx="0"
+                          dy="1"
+                          stdDeviation="1"
+                          floodOpacity="0.3"
+                        />
+                      </filter>
+                    </defs>
 
-                    {/* Bottom contacts */}
-                    <path d="M18 48V40C18 37 20 34 23 34H35" />
-                    <path d="M52 48V40C52 37 50 34 47 34H35" />
+                    {/* Real chip body */}
+                    <rect
+                      x="2"
+                      y="2"
+                      width="66"
+                      height="46"
+                      rx="9"
+                      fill="url(#chipGold)"
+                      filter="url(#chipShadow)"
+                    />
 
-                    {/* Central EMV section */}
-                    <rect x="20" y="16" width="30" height="18" rx="3" />
+                    {/* Metallic surface */}
+                    <rect
+                      x="2"
+                      y="2"
+                      width="66"
+                      height="46"
+                      rx="9"
+                      fill="url(#chipHighlight)"
+                    />
 
-                    {/* Center horizontal */}
-                    <path d="M20 25H50" />
+                    {/* EMV etched contacts */}
+                    <g
+                      fill="none"
+                      stroke="#87620A"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* Left contacts */}
+                      <path d="M2 16H15C18 16 20 18 20 21V25" />
+                      <path d="M2 34H15C18 34 20 32 20 29V25" />
 
-                    {/* Center vertical */}
-                    <path d="M35 16V34" />
+                      {/* Right contacts */}
+                      <path d="M68 16H55C52 16 50 18 50 21V25" />
+                      <path d="M68 34H55C52 34 50 32 50 29V25" />
 
-                    {/* Additional internal connections */}
-                    <path d="M27 16V25" />
-                    <path d="M43 16V25" />
-                    <path d="M27 25V34" />
-                    <path d="M43 25V34" />
-                  </g>
+                      {/* Top contacts */}
+                      <path d="M18 2V10C18 13 20 16 23 16H35" />
+                      <path d="M52 2V10C52 13 50 16 47 16H35" />
 
-                  {/* Outer metallic edge */}
-                  <rect
-                    x="2.5"
-                    y="2.5"
-                    width="65"
-                    height="45"
-                    rx="8.5"
-                    fill="none"
-                    stroke="#FFF0A0"
-                    strokeOpacity="0.5"
-                    strokeWidth="1"
-                  />
-                </svg>
-                <p className="number">{cardNumber}</p>
-                <p className="valid_thru">VALID THRU</p>
-                <p className="date_8264">{expiryDate}</p>
-                <p className="name">{cardName}</p>
-              </div>
+                      {/* Bottom contacts */}
+                      <path d="M18 48V40C18 37 20 34 23 34H35" />
+                      <path d="M52 48V40C52 37 50 34 47 34H35" />
 
-              {/* BACK SIDE (Displays Amount Paid, flips on hover) */}
-              <div className="flip-card-back">
-                <div className="strip" />
-                <div className="amount-container">
-                  <span className="amount-label">Amount Paid</span>
-                  <span className="amount-value">{amountPaid}</span>
+                      {/* Central EMV section */}
+                      <rect x="20" y="16" width="30" height="18" rx="3" />
+
+                      {/* Center horizontal */}
+                      <path d="M20 25H50" />
+
+                      {/* Center vertical */}
+                      <path d="M35 16V34" />
+
+                      {/* Additional internal connections */}
+                      <path d="M27 16V25" />
+                      <path d="M43 16V25" />
+                      <path d="M27 25V34" />
+                      <path d="M43 25V34" />
+                    </g>
+
+                    {/* Outer metallic edge */}
+                    <rect
+                      x="2.5"
+                      y="2.5"
+                      width="65"
+                      height="45"
+                      rx="8.5"
+                      fill="none"
+                      stroke="#FFF0A0"
+                      strokeOpacity="0.5"
+                      strokeWidth="1"
+                    />
+                  </svg>
+                  <p className="number">{cardNumber}</p>
+                  <p className="valid_thru">VALID THRU</p>
+                  <p className="date_8264">{expiryDate}</p>
+                  <p className="name">{cardName}</p>
+                </div>
+
+                {/* BACK SIDE (Displays Amount Paid, flips on hover) */}
+                <div className="flip-card-back">
+                  <div className="strip" />
+                  <div className="amount-container">
+                    <span className="amount-label">Amount Paid</span>
+                    <span className="amount-value">{amountPaid}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          <div className=" active:scale-97 ">
+            <NavLink
+              to={"/cart"}
+              className="bg-green-800 text-white w-full px-14 py-3 rounded-xl font-bold"
+            >
+              Dashbord
+            </NavLink>
+          </div>
         </div>
-      </div>
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 

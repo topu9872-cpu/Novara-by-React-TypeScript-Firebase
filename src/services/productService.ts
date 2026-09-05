@@ -7,10 +7,12 @@ import {
   DocumentSnapshot,
   doc,
   getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
 import type { Product } from "../types/Product";
+import type { Orders } from "../types/Orders";
 
 export const getProducts = async () => {
   try {
@@ -83,6 +85,28 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     return null;
   } catch (error) {
     console.error("Error fetching product by ID:", error);
+    return null;
+  }
+};
+
+export const createOrder = async (
+  orderData: Orders,
+): Promise<Orders | null> => {
+  try {
+    const orderRef = doc(db, "orders", orderData.sessionId);
+
+    await setDoc(
+      orderRef,
+      {
+        ...orderData,
+        createdAt: new Date(),
+      },
+      { merge: true },
+    );
+
+    return orderData;
+  } catch (error) {
+    console.error("❌ FIREBASE ORDER ERROR:", error);
     return null;
   }
 };

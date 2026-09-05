@@ -57,7 +57,7 @@ const ProductDetails: React.FC = () => {
     }
   };
 
-  console.log(quantity, product);
+
 
   const user = auth.currentUser;
 
@@ -77,8 +77,8 @@ const ProductDetails: React.FC = () => {
 
     navigate("/checkout", {
       state: {
-        product,
-        quantity,
+        product:product,
+        quantity:quantity,
       },
     });
   };

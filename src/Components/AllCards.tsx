@@ -67,7 +67,6 @@ export const Card: React.FC<CardProps> = ({ product }) => {
             </span>
 
            <NavLink to={`/shop/${product.id}`}
-              onClick={() => console.log(`Added ${product.name} to cart`)}
               aria-label="Add to Cart"
               className="w-9 h-9 rounded-lg bg-[#09221F] text-white flex items-center justify-center hover:bg-[#0F302A] transition-all shadow-xs active:scale-95 cursor-pointer"
             >

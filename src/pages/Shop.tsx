@@ -25,7 +25,6 @@ const Shop = () => {
       setLoading(true);
       try {
         const data = await getAllProducts();
-        console.log("Fetched products for shop:", data.products); // Debug log
         setAllProducts(data.products || []);
       } catch (error) {
         console.error("Failed to fetch shop products:", error);

@@ -50,12 +50,10 @@ const Profile: React.FC = () => {
       const userRef = doc(db, "users", user.uid);
       const snap = await getDoc(userRef);
 
-      console.log("Current Firebase UID:", user.uid);
 
       if (snap.exists()) {
         const data = snap.data();
 
-        console.log("Firestore profile data:", data);
 
         setProfile({
           name: data.name || user.displayName || "No Name",
@@ -65,7 +63,6 @@ const Profile: React.FC = () => {
           photoURL: data.photoURL || user.photoURL || "",
         });
       } else {
-        console.log("No Firestore profile found at users/" + user.uid);
 
         // Firebase Auth fallback
         setProfile({
@@ -100,7 +97,6 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Firebase Auth user:", user);
 
       try {
         setCurrentUser(user);

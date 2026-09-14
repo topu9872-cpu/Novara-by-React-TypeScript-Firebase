@@ -110,70 +110,87 @@ const Checkout: React.FC = () => {
     );
   }, []);
 
-  // -----------------------------------------
-  // STRIPE CHECKOUT
-  // -----------------------------------------
-  const handleStripeCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
+// -----------------------------------------
+// STRIPE CHECKOUT
+// -----------------------------------------
+const handleStripeCheckout = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (checkoutItems.length === 0) {
-      toast.error("Your cart is empty.");
-      return;
-    }
-    const user = auth.currentUser;
+  if (checkoutItems.length === 0) {
+    toast.error("Your cart is empty.");
+    return;
+  }
 
-    if (!user) return;
-    setIsSubmitting(true);
+  const user = auth.currentUser;
 
-    try {
-      const payload = {
-        productPrice: total,
-        quantity,
+  if (!user) {
+    toast.error("Please login first.");
+    return;
+  }
 
-        // User information
-        userId: user.uid,
-        email: user.email || formData.email,
-        displayName: user.displayName || formData.fullName,
-        phoneNumber: user.phoneNumber || "",
+  setIsSubmitting(true);
 
-        // Products
-        firstProduct: checkoutItems[0],
-        product: checkoutItems,
-      };
+  try {
+    const payload = {
+      productPrice: total,
+      quantity,
 
-      const response = await fetch(STRIPE_FUNCTION_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      // -----------------------------------------
+      // USER INFORMATION
+      // -----------------------------------------
+      userId: user.uid,
+      email: user.email || formData.email,
+      displayName: user.displayName || formData.fullName,
+      phoneNumber: user.phoneNumber || "",
 
-      const data = await response.json();
+      // -----------------------------------------
+      // PRODUCTS
+      // -----------------------------------------
+      firstProduct: checkoutItems[0],
+      product: checkoutItems,
+    };
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to create Stripe checkout session.",
-        );
-      }
+    console.log("Stripe checkout payload:", payload);
 
-      if (!data.url) {
-        throw new Error("Stripe checkout URL was not returned.");
-      }
+    const response = await fetch(STRIPE_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      window.location.href = data.url;
-    } catch (error) {
-      console.error("Stripe checkout error:", error);
+    const data = await response.json();
 
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Unable to start Stripe checkout.",
+    console.log("Stripe response:", data);
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+          "Unable to create Stripe checkout session.",
       );
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+
+    if (!data.url) {
+      throw new Error(
+        "Stripe checkout URL was not returned.",
+      );
+    }
+
+    // Redirect to Stripe Checkout
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Stripe checkout error:", error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Unable to start Stripe checkout.",
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   // -----------------------------------------
   // UI
   // -----------------------------------------

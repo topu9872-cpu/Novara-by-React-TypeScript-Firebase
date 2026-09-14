@@ -1,13 +1,28 @@
-import type { Product } from "./Product";
+export interface OrderProduct {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  quantity: number;
+  category?: string;
+  sessionId?: string;
+}
 
 export interface Orders {
-  phoneNumber: string | number;
+  id?: string;
+
   userId: string;
-  sessionId: string;
-  email: string;
-  displayName: string;
+
   amount: number;
   currency: string;
+
+  displayName: string;
+  email: string;
+  phoneNumber: string;
+
   paymentStatus: string;
-  products: Product[];
+
+  createdAt: unknown;
+
+  products: OrderProduct[];
 }

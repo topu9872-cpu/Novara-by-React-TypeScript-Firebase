@@ -22,7 +22,7 @@ if (!stripeSecretKey) {
 const stripe = new Stripe(stripeSecretKey);
 
 export const createCheckoutSession = onRequest(
-  { region: "asia-southeast1" ,cors: true,},
+  { region: "asia-southeast1", cors: true },
   async (req, res) => {
     corsHandler(req, res, async () => {
       try {
@@ -144,7 +144,7 @@ export const createCheckoutSession = onRequest(
 );
 
 export const verifyCheckoutSession = onRequest(
-  { region: "asia-southeast1" ,cors: true,},
+  { region: "asia-southeast1", cors: true },
   async (req, res) => {
     corsHandler(req, res, async () => {
       try {
@@ -176,6 +176,10 @@ export const verifyCheckoutSession = onRequest(
           return;
         }
 
+        // -----------------------------------------
+        // PRODUCTS
+        // -----------------------------------------
+
         let products: any[] = [];
 
         try {
@@ -185,6 +189,20 @@ export const verifyCheckoutSession = onRequest(
         } catch {
           console.error("Product JSON parse error");
         }
+
+        // Add sessionId ONLY to each product
+        products = products.map((product) => ({
+          id: product.id || "",
+          name: product.name || "",
+          image: product.image || "",
+          price: Number(product.price) || 0,
+          quantity: Number(product.quantity || 1),
+          sessionId: session.id,
+        }));
+
+        // -----------------------------------------
+        // USER INFORMATION
+        // -----------------------------------------
 
         const userId = session.metadata?.userId || "";
 
@@ -199,12 +217,20 @@ export const verifyCheckoutSession = onRequest(
 
         const phoneNumber = session.metadata?.phoneNumber || "";
 
+        // -----------------------------------------
+        // PAYMENT
+        // -----------------------------------------
+
         const amount = session.amount_total ? session.amount_total / 100 : 0;
 
         const currency = session.currency || "usd";
 
+        // -----------------------------------------
+        // ORDER DATA
+        // -----------------------------------------
+
         const orderData = {
-          userId,
+          userId: userId, // ROOT LEVEL
           sessionId: session.id,
           email,
           displayName,
@@ -216,21 +242,31 @@ export const verifyCheckoutSession = onRequest(
           createdAt: FieldValue.serverTimestamp(),
         };
 
+        // -----------------------------------------
+        // SAVE ORDER
+        // -----------------------------------------
+
         const orderRef = db.collection("orders").doc(session.id);
 
-        const existingOrder = await orderRef.get();
+        await orderRef.set(orderData, { merge: true });
 
-        if (!existingOrder.exists) {
-          await orderRef.set(orderData);
-        }
+        console.log("✅ ORDER SAVED:", {
+          orderId: session.id,
+          userId,
+          amount,
+        });
+
+        // -----------------------------------------
+        // RESPONSE
+        // -----------------------------------------
 
         res.status(200).json({
           success: true,
           sessionId: session.id,
+          userId,
           email,
           displayName,
           phoneNumber,
-          userId,
           amount,
           currency,
           paymentStatus: session.payment_status,

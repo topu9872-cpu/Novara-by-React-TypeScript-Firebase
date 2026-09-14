@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router";
 import { Search, User, Menu, X } from "lucide-react";
+import { TiShoppingCart } from "react-icons/ti";
 import gsap from "gsap";
 import {
   FaArrowRightFromBracket,
@@ -202,6 +203,15 @@ const context = useCart() as { cart?: CartItem[] };
                     >
                       <FaUser className="text-emerald-800 text-sm" />
                       <span>Profile</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/orders"
+                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
+                    >
+                      <TiShoppingCart className="text-emerald-800 text-sm" />
+                      <span>My Orders</span>
                     </NavLink>
                   </li>
                   <li>

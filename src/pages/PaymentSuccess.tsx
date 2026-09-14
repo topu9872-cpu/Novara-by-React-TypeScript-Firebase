@@ -341,7 +341,7 @@ const PaymentSuccess = () => {
           </div>
           <div className=" active:scale-97 ">
             <NavLink
-              to={"/cart"}
+              to={"/orders"}
               className="bg-green-800 text-white w-full px-14 py-3 rounded-xl font-bold"
             >
               Dashbord

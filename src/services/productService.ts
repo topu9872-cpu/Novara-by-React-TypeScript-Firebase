@@ -13,6 +13,7 @@ import {
 import { db } from "../firebase/firebase";
 import type { Product } from "../types/Product";
 import type { Orders } from "../types/Orders";
+import { getAuth } from "firebase/auth";
 
 export const getProducts = async () => {
   try {
@@ -93,20 +94,59 @@ export const createOrder = async (
   orderData: Orders,
 ): Promise<Orders | null> => {
   try {
-    const orderRef = doc(db, "orders", orderData.sessionId);
+    const sessionId = orderData.products?.[0]?.sessionId;
 
-    await setDoc(
-      orderRef,
-      {
-        ...orderData,
-        createdAt: new Date(),
-      },
-      { merge: true },
-    );
+    if (!sessionId) {
+      console.error("❌ Session ID not found");
+      return null;
+    }
+
+    const orderRef = doc(db, "orders", sessionId);
+
+    const order = {
+      ...orderData,
+      userId: orderData.userId,
+      createdAt: new Date(),
+    };
+
+    await setDoc(orderRef, order, { merge: true });
 
     return orderData;
   } catch (error) {
     console.error("❌ FIREBASE ORDER ERROR:", error);
     return null;
+  }
+};
+
+
+
+export const getUserOrders = async (): Promise<Orders[]> => {
+  try {
+    const user = getAuth().currentUser;
+
+    if (!user) {
+      console.log("No logged-in user");
+      return [];
+    }
+
+    console.log("USER UID:", user.uid);
+
+    const q = query(
+      collection(db, "orders"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc"),
+    );
+
+    const snapshot = await getDocs(q);
+
+    console.log("ORDERS FOUND:", snapshot.size);
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Orders),
+    }));
+  } catch (error) {
+    console.error("GET USER ORDERS ERROR:", error);
+    return [];
   }
 };

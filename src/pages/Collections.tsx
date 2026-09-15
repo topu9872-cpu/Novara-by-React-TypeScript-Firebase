@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FaBagShopping, FaXmark, FaTrash, FaArrowRight } from "react-icons/fa6";
 import gsap from "gsap";
-import { useCart, type CartItem } from "../ContextProvider";
 
 const initialProducts = [
   {
@@ -104,60 +102,9 @@ export default function Collections() {
   const [activeQuickViewId, setActiveQuickViewId] = useState<number | null>(
     null,
   );
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // Consume context safely with full flexibility for different provider patterns
-  const context = useCart() as unknown as {
-    cart?: CartItem[];
-    setCart?: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    addToCart?: (product: CartItem) => void;
-    removeFromCart?: (id: string | number) => void;
-    toggleCartItem?: (product: CartItem) => void;
-  };
-  const cartItems = context?.cart || [];
-
-  // Safe handler supporting multiple Context shapes
-  const handleToggleCart = (productData: (typeof initialProducts)[0]) => {
-    const targetId = productData.id;
-
-    // Map local mock product shape to match standard CartItem shape
-    const productItem: CartItem = {
-      id: productData.id,
-      name: productData.title,
-      price: productData.price,
-      image: productData.image,
-      quantity: 1,
-    };
-
-    const isAlreadyAdded = cartItems.some(
-      (item) => Number(item.id || item.id) === Number(targetId),
-    );
-
-    if (typeof context?.toggleCartItem === "function") {
-      context.toggleCartItem(productItem);
-    } else if (
-      isAlreadyAdded &&
-      typeof context?.removeFromCart === "function"
-    ) {
-      context.removeFromCart(targetId);
-    } else if (!isAlreadyAdded && typeof context?.addToCart === "function") {
-      context.addToCart(productItem);
-    } else if (typeof context?.setCart === "function") {
-      context.setCart((prev: CartItem[] = []): CartItem[] => {
-        if (isAlreadyAdded) {
-          return prev.filter(
-            (item) => Number(item.id || item.id) !== Number(targetId),
-          );
-        } else {
-          return [...prev, productItem];
-        }
-      });
-    }
-  };
 
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -187,17 +134,6 @@ export default function Collections() {
     return () => ctx.revert();
   }, [activeCategory]);
 
-  // Drawer Animation
-  useEffect(() => {
-    if (isCartOpen && drawerRef.current) {
-      gsap.fromTo(
-        drawerRef.current,
-        { x: "100%" },
-        { x: "0%", duration: 0.4, ease: "power3.out" },
-      );
-    }
-  }, [isCartOpen]);
-
   const categories = ["All", "Living", "Dining", "Storage", "Lighting"];
 
   const filteredProducts =
@@ -209,32 +145,9 @@ export default function Collections() {
     setActiveQuickViewId(activeQuickViewId === id ? null : id);
   };
 
-  const cartProducts = cartItems;
-  const totalPrice = cartItems.reduce(
-    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
-    0,
-  );
-
   return (
     <div className="bg-[#f7f8f6] min-h-screen py-16 px-4 font-sans text-neutral-900 relative">
       <div className="max-w-7xl mx-auto">
-        {/* Top Navbar / Floating Bag Trigger */}
-        <div className="flex justify-between items-center mb-10">
-          <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-            Novara Studio &mdash; Catalog
-          </span>
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="bg-white border top-60 fixed z-50 border-neutral-200/80 px-4 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-neutral-50 transition-colors shadow-sm cursor-pointer"
-          >
-            <FaBagShopping className="text-emerald-900" />
-            <span>Bag</span>
-            <span className="w-5 h-5 bg-emerald-900 text-white rounded-full flex items-center justify-center text-[10px]">
-              {cartItems.length}
-            </span>
-          </button>
-        </div>
-
         {/* Header */}
         <div
           ref={containerRef}
@@ -279,9 +192,6 @@ export default function Collections() {
         >
           {filteredProducts.map((product) => {
             const isQuickView = activeQuickViewId === product.id;
-            const isAdded = cartItems.some(
-              (item) => Number(item.id || item.id) === Number(product.id),
-            );
 
             return (
               <div
@@ -354,133 +264,12 @@ export default function Collections() {
                   >
                     {isQuickView ? "Close" : "Details"}
                   </button>
-
-                  <button
-                    onClick={() => handleToggleCart(product)}
-                    className={`flex-1 text-center text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer ${
-                      isAdded
-                        ? "bg-emerald-900 text-white shadow-sm"
-                        : "bg-emerald-900 hover:bg-emerald-800 text-white shadow-sm shadow-emerald-950/10"
-                    }`}
-                  >
-                    {isAdded ? "Saved" : "Add"}
-                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-
-      {/* Shopping Bag Slide-over Drawer */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
-          <div
-            ref={drawerRef}
-            className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between p-6 overflow-y-auto"
-          >
-            <div>
-              {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
-                <div className="flex items-center gap-2">
-                  <FaBagShopping className="text-emerald-900 text-sm" />
-                  <h3 className="text-base font-bold text-neutral-900">
-                    Your Selection Bag ({cartItems.length})
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsCartOpen(false)}
-                  className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-700 flex items-center justify-center hover:bg-neutral-200 transition-colors cursor-pointer"
-                >
-                  <FaXmark className="text-xs" />
-                </button>
-              </div>
-
-              {/* Drawer Items List */}
-              {cartProducts.length === 0 ? (
-                <div className="text-center py-20 space-y-3">
-                  <div className="w-12 h-12 bg-neutral-100 text-neutral-400 rounded-full flex items-center justify-center mx-auto">
-                    <FaBagShopping />
-                  </div>
-                  <p className="text-sm font-bold text-neutral-800">
-                    Your bag is currently empty
-                  </p>
-                  <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-                    Explore our curated collection and add bespoke pieces to
-                    your design list.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {cartProducts.map((item, idx) => {
-                    const originalProduct = initialProducts.find(
-                      (p) => Number(p.id) === Number(item.id || item.id),
-                    );
-
-                    return (
-                      <div
-                        key={`${item.id || item.id}-${idx}`}
-                        className="flex items-center gap-4 p-3 rounded-2xl bg-[#f7f8f6] border border-neutral-100"
-                      >
-                        <img
-                          src={item.image || originalProduct?.image}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-xl shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-neutral-900 truncate">
-                            {item.name}
-                          </h4>
-                          <p className="text-xs font-extrabold text-emerald-900 mt-0.5">
-                            ${Number(item.price || 0).toFixed(2)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (originalProduct) {
-                              handleToggleCart(originalProduct);
-                            } else if (
-                              typeof context?.removeFromCart === "function"
-                            ) {
-                              context.removeFromCart(item.id || item.id!);
-                            }
-                          }}
-                          className="w-7 h-7 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
-                          title="Remove item"
-                        >
-                          <FaTrash className="text-xs" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Footer */}
-            {cartProducts.length > 0 && (
-              <div className="pt-6 border-t border-neutral-100 space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-neutral-500">
-                    Subtotal Estimate
-                  </span>
-                  <span className="font-extrabold text-neutral-900">
-                    ${totalPrice.toLocaleString()}
-                  </span>
-                </div>
-                <button
-                  onClick={() =>
-                    alert("Proceeding to secure studio checkout...")
-                  }
-                  className="w-full bg-emerald-900 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-950/10 cursor-pointer"
-                >
-                  Proceed to Checkout <FaArrowRight className="text-[10px]" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

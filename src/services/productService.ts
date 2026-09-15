@@ -9,6 +9,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
@@ -201,6 +202,41 @@ export const AddToCart = async (product: Product, quantity: number) => {
   }
 };
 
+export const updateCartItemQuantity = async (
+  productId: string,
+  quantity: number,
+) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const cartRef = doc(db, "users", user.uid, "cart", productId);
+
+    if (quantity <= 0) {
+      await deleteDoc(cartRef);
+      return;
+    }
+
+    await updateDoc(cartRef, { quantity });
+  } catch (error) {
+    console.error("Update cart quantity error:", error);
+    toast.error("Failed to update cart quantity");
+  }
+};
+
+export const removeCartItem = async (productId: string) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const cartRef = doc(db, "users", user.uid, "cart", productId);
+    await deleteDoc(cartRef);
+  } catch (error) {
+    console.error("Remove cart item error:", error);
+    toast.error("Failed to remove item");
+  }
+};
+
 export const getCartItems = async (): Promise<CartItem[]> => {
   try {
     const user = await getCurrentUser();
@@ -226,7 +262,10 @@ export const getCartItems = async (): Promise<CartItem[]> => {
           name: typeof data.name === "string" ? data.name : "Unnamed item",
           price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
           image: typeof data.image === "string" ? data.image : "",
-          quantity: Number.isFinite(normalizedQuantity) && normalizedQuantity > 0 ? normalizedQuantity : 1,
+          quantity:
+            Number.isFinite(normalizedQuantity) && normalizedQuantity > 0
+              ? normalizedQuantity
+              : 1,
         };
       })
       .filter((item) => item.name || item.image || item.price > 0);

@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate, useSearchParams } from "react-router";
-import { Search, User, Menu, X } from "lucide-react";
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
+import { Search, User, Menu, X, LayoutDashboard } from "lucide-react";
 import { TiShoppingCart } from "react-icons/ti";
 import gsap from "gsap";
 import {
@@ -9,12 +14,12 @@ import {
   FaGear,
   FaUser,
 } from "react-icons/fa6";
-import { useCart, type CartItem } from "../ContextProvider";
 import { toast } from "sonner";
 import { logout } from "../services/auth";
-import { auth } from "../firebase/firebase";
+import { auth, db } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User as FirebaseUser } from "firebase/auth";
+import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 
 interface NavItem {
   label: string;
@@ -34,17 +39,61 @@ export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
-
+  const [cartCount, setCartCount] = useState(0);
+  const [showCartBadge, setShowCartBadge] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const mobileSidebarRef = useRef<HTMLDivElement>(null);
-  
+  const cartBaselineRef = useRef(0);
+  const [role, setRole] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") || "";
-  
+  const location = useLocation();
+
   const navigate = useNavigate();
-  
-const context = useCart() as { cart?: CartItem[] };
-  const cart = context?.cart || [];
+  const isCartPage = location.pathname === "/cart";
+
+  useEffect(() => {
+    let unsubscribeCart: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeCart?.();
+
+      if (!user) {
+        setCartCount(0);
+        cartBaselineRef.current = 0;
+        setShowCartBadge(false);
+        return;
+      }
+
+      const cartRef = collection(db, "users", user.uid, "cart");
+
+      unsubscribeCart = onSnapshot(cartRef, (snapshot) => {
+        const totalItems = snapshot.size;
+
+        if (isCartPage) {
+          cartBaselineRef.current = totalItems;
+          setCartCount(0);
+          setShowCartBadge(false);
+          return;
+        }
+
+        const newItemsCount = Math.max(totalItems - cartBaselineRef.current, 0);
+
+        if (newItemsCount > 0) {
+          setCartCount(newItemsCount);
+          setShowCartBadge(true);
+        } else {
+          setCartCount(0);
+          setShowCartBadge(false);
+        }
+      });
+    });
+
+    return () => {
+      unsubscribeCart?.();
+      unsubscribeAuth();
+    };
+  }, [isCartPage]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -71,7 +120,7 @@ const context = useCart() as { cart?: CartItem[] };
       gsap.fromTo(
         mobileSidebarRef.current,
         { opacity: 0, scale: 0.95, y: -10 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: "power2.out" }
+        { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: "power2.out" },
       );
     }
   }, [isMobileMenuOpen]);
@@ -105,6 +154,19 @@ const context = useCart() as { cart?: CartItem[] };
     }
   };
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+        setRole(userDoc.data()?.role || "");
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   return (
     <header
       ref={navbarRef}
@@ -116,7 +178,11 @@ const context = useCart() as { cart?: CartItem[] };
           className="anim-nav-item opacity-0 md:hidden text-gray-800 focus:outline-none p-1"
           aria-label="Toggle Menu"
         >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
 
         <div className="anim-nav-item opacity-0 flex items-center">
@@ -210,10 +276,21 @@ const context = useCart() as { cart?: CartItem[] };
                       to="/orders"
                       className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
                     >
-                      <TiShoppingCart className="text-emerald-800 text-sm" />
+                      <TiShoppingCart className="text-emerald-800 text-lg" />
                       <span>My Orders</span>
                     </NavLink>
                   </li>
+                  {role === "admin" && (
+                    <li>
+                      <NavLink
+                        to="/dashboard"
+                        className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
+                      >
+                        <LayoutDashboard className="text-emerald-800 w-4 h-4 text-bold" /> 
+                        <span>Dashboard</span>
+                      </NavLink>
+                    </li>
+                  )}
                   <li>
                     <NavLink
                       to="/settings"
@@ -243,7 +320,10 @@ const context = useCart() as { cart?: CartItem[] };
             </div>
           ) : (
             <div className="hidden sm:block">
-              <NavLink className="bg-emerald-800 text-white btn btn-sm px-4" to="/login">
+              <NavLink
+                className="bg-emerald-800 text-white btn btn-sm px-4"
+                to="/login"
+              >
                 Login
               </NavLink>
             </div>
@@ -255,9 +335,10 @@ const context = useCart() as { cart?: CartItem[] };
             className="hover:opacity-75 hover:bg-emerald-100 btn btn-ghost btn-circle avatar transition-opacity relative flex items-center justify-center"
           >
             <FaBagShopping className="text-emerald-800 w-5 h-5" />
-            {cart.length > 0 && (
+
+            {!isCartPage && showCartBadge && cartCount > 0 && (
               <span className="absolute top-1 right-1 bg-emerald-800 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {cart.length}
+                {cartCount}
               </span>
             )}
           </NavLink>

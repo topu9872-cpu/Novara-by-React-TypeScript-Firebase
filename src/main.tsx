@@ -24,6 +24,7 @@ import { AddressesComponent } from "./pages/AddressesComponent";
 import { SupportComponent } from "./pages/SupportComponent";
 import ForgotPassword from "./pages/ResetPasswordWithCode";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import Dashboard from "./Dashboard/Dashboard";
 
 const router = createBrowserRouter([
   {
@@ -104,6 +105,15 @@ const router = createBrowserRouter([
       },
     ],
   },
+  {
+    path:'/dashboard',
+    Component:Dashboard,
+    children:[
+      {
+        
+      }
+    ]
+  }
 ]);
 
 export default App;

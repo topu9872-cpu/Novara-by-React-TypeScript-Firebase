@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import {
   ShoppingCart,
   ArrowLeft,
@@ -7,7 +7,7 @@ import {
   Truck,
   RotateCcw,
 } from "lucide-react";
-import { getProductById } from "../services/productService";
+import { AddToCart, getProductById } from "../services/productService";
 import type { Product } from "../types/Product";
 import { useCart } from "../ContextProvider";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { auth } from "../firebase/firebase";
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
@@ -46,18 +47,17 @@ const ProductDetails: React.FC = () => {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
     if (addToCart) {
       // Pass both product and quantity correctly
-      addToCart({ ...product, quantity }, quantity);
+      // addToCart({ ...product, quantity }, quantity);
+      await AddToCart(product, quantity);
       toast.success(`Added ${quantity} ${product.name} to your cart!`);
     } else {
       toast.error("Cart action unavailable.");
     }
   };
-
-
 
   const user = auth.currentUser;
 
@@ -77,11 +77,12 @@ const ProductDetails: React.FC = () => {
 
     navigate("/checkout", {
       state: {
-        product:product,
-        quantity:quantity,
+        product: product,
+        quantity: quantity,
       },
     });
   };
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-neutral-500 font-medium">

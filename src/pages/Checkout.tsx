@@ -3,11 +3,11 @@ import { useLocation, useNavigate } from "react-router";
 import { ArrowLeft, Lock, ShoppingBag, ShieldCheck } from "lucide-react";
 import gsap from "gsap";
 import { auth } from "../firebase/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { toast } from "sonner";
 import type { CartItem } from "../types/Cart";
 // If you have a hook or context for the cart, import it here:
 // import { useCart } from "../context/CartContext";
-const currentUser = auth.currentUser;
 type CheckoutProduct = CartItem & {
   _id?: string;
   id?: string;
@@ -31,10 +31,27 @@ const Checkout: React.FC = () => {
   // USER INFORMATION
   // -----------------------------------------
 
-  const [formData] = useState({
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const [formData, setFormData] = useState({
     fullName: currentUser?.displayName || "",
     email: currentUser?.email || "",
   });
+
+  useEffect(() => {
+    setFormData({
+      fullName: currentUser?.displayName || "",
+      email: currentUser?.email || "",
+    });
+  }, [currentUser]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -121,7 +138,7 @@ const handleStripeCheckout = async (e: React.FormEvent) => {
     return;
   }
 
-  const user = auth.currentUser;
+  const user = currentUser;
 
   if (!user) {
     toast.error("Please login first.");

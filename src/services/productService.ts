@@ -8,12 +8,30 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
 import type { Product } from "../types/Product";
 import type { Orders } from "../types/Orders";
-import { getAuth } from "firebase/auth";
+import type { CartItem } from "../types/Cart";
+import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
+import { toast } from "sonner";
+
+const getCurrentUser = async (): Promise<User | null> => {
+  const auth = getAuth();
+
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  return await new Promise<User | null>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+};
 
 export const getProducts = async () => {
   try {
@@ -118,18 +136,13 @@ export const createOrder = async (
   }
 };
 
-
-
 export const getUserOrders = async (): Promise<Orders[]> => {
   try {
-    const user = getAuth().currentUser;
-
+    const user = await getCurrentUser();
     if (!user) {
-      console.log("No logged-in user");
+      toast.error("Please login first");
       return [];
     }
-
-    console.log("USER UID:", user.uid);
 
     const q = query(
       collection(db, "orders"),
@@ -139,14 +152,89 @@ export const getUserOrders = async (): Promise<Orders[]> => {
 
     const snapshot = await getDocs(q);
 
-    console.log("ORDERS FOUND:", snapshot.size);
-
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...(doc.data() as Orders),
     }));
   } catch (error) {
     console.error("GET USER ORDERS ERROR:", error);
+    return [];
+  }
+};
+
+export const AddToCart = async (product: Product, quantity: number) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      toast.error("Please login first");
+      return;
+    }
+
+    const cartRef = doc(db, "users", user.uid, "cart", product.id);
+
+    const cartSnap = await getDoc(cartRef);
+
+    if (cartSnap.exists()) {
+      const currentQuantity = cartSnap.data().quantity || 0;
+
+      await updateDoc(cartRef, {
+        quantity: currentQuantity + quantity,
+      });
+    } else {
+      await setDoc(cartRef, {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category || "",
+        quantity: quantity,
+        addedAt: new Date(),
+      });
+
+      console.log("Cart created successfully");
+    }
+
+    toast.success("Added to cart");
+  } catch (error) {
+    console.error("Add to cart error:", error);
+    toast.error("Failed to add to cart");
+  }
+};
+
+export const getCartItems = async (): Promise<CartItem[]> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return [];
+    }
+
+    const cartRef = collection(db, "users", user.uid, "cart");
+    const snapshot = await getDocs(cartRef);
+
+    const cartItems: CartItem[] = snapshot.docs
+      .map((doc) => {
+        const data = doc.data() as Partial<CartItem> & {
+          price?: number | string;
+          quantity?: number | string;
+        };
+
+        const normalizedPrice = Number(data.price ?? 0);
+        const normalizedQuantity = Number(data.quantity ?? 1);
+
+        return {
+          id: doc.id,
+          name: typeof data.name === "string" ? data.name : "Unnamed item",
+          price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+          image: typeof data.image === "string" ? data.image : "",
+          quantity: Number.isFinite(normalizedQuantity) && normalizedQuantity > 0 ? normalizedQuantity : 1,
+        };
+      })
+      .filter((item) => item.name || item.image || item.price > 0);
+
+    return cartItems;
+  } catch (error) {
+    console.error("Get cart error:", error);
+    toast.error("Failed to load cart");
     return [];
   }
 };

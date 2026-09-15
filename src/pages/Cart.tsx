@@ -1,17 +1,56 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag, ArrowRight } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ArrowLeft,
+  ShoppingBag,
+  ArrowRight,
+} from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase/firebase";
 import { useCart } from "../ContextProvider";
 import { toast } from "sonner";
 import type { CartItem } from "../types/Cart";
+import { getCartItems } from "../services/productService";
 
 const Cart = () => {
   const navigate = useNavigate();
 
-  const { cart = [], setCart } = useCart() as unknown as { 
-    cart?: CartItem[]; 
-    setCart?: React.Dispatch<React.SetStateAction<CartItem[]>> 
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const { cart = [], setCart } = useCart() as unknown as {
+    cart?: CartItem[];
+    setCart?: React.Dispatch<React.SetStateAction<CartItem[]>>;
   };
+
+  useEffect(() => {
+    const loadCart = async () => {
+      const items = await getCartItems();
+      const safeItems = Array.isArray(items) ? items : [];
+
+      setCartItems(safeItems);
+
+      if (setCart) {
+        setCart(safeItems);
+      }
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setCartItems([]);
+        if (setCart) setCart([]);
+        return;
+      }
+
+      loadCart();
+    });
+
+    return () => unsubscribe();
+  }, [setCart]);
+
+  const displayCart = cart.length > 0 ? cart : cartItems;
 
   const updateQuantity = (index: number, delta: number) => {
     if (!setCart) return;
@@ -40,14 +79,14 @@ const Cart = () => {
   };
 
   // Calculate the total number of individual items combined
-  const totalItemsCount = cart.reduce(
+  const totalItemsCount = displayCart.reduce(
     (acc, item) => acc + (item.quantity || 1),
-    0
+    0,
   );
 
-  const subtotal = cart.reduce(
+  const subtotal = displayCart.reduce(
     (acc, item) => acc + Number(item.price) * (item.quantity || 1),
-    0
+    0,
   );
   const shipping = subtotal > 0 ? 5.0 : 0;
   const total = subtotal + shipping;
@@ -90,7 +129,7 @@ const Cart = () => {
             </span>
           </div>
 
-          {cart.length === 0 ? (
+          {displayCart.length === 0 ? (
             <div className="text-center py-16 space-y-4">
               <div className="w-16 h-16 bg-neutral-100 text-neutral-400 rounded-full flex items-center justify-center mx-auto">
                 <ShoppingBag size={28} />
@@ -109,7 +148,7 @@ const Cart = () => {
             <div className="space-y-6">
               {/* Items List */}
               <div className="divide-y divide-neutral-100 max-h-96 overflow-y-auto pr-1">
-                {cart.map((item, index) => (
+                {displayCart.map((item, index) => (
                   <div
                     key={index}
                     className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 first:pt-0 last:pb-0"
@@ -154,13 +193,14 @@ const Cart = () => {
 
                       {/* Total Item Price */}
                       <span className="text-sm font-extrabold text-neutral-900 min-w-16 text-right">
-                        ${(Number(item.price) * (item.quantity || 1)).toFixed(2)}
+                        $
+                        {(Number(item.price) * (item.quantity || 1)).toFixed(2)}
                       </span>
 
                       {/* Delete Button */}
                       <button
                         type="button"
-                        onClick={() => removeItem(index)}
+                        onClick={() => removeItem(Number(item.id))}
                         className="text-neutral-400 hover:text-red-500 transition-colors p-2 cursor-pointer"
                         title="Remove Item"
                       >

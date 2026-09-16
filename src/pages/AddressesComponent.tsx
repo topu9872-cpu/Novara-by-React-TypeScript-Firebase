@@ -40,18 +40,7 @@ export const AddressesComponent: React.FC = () => {
       isDefault: true,
       type: "Home",
     },
-    {
-      id: "addr-2",
-      fullName: "Alex Johnson",
-      phone: "+1 (555) 987-6543",
-      street: "456 Corporate Blvd, Suite 900",
-      city: "New York",
-      state: "NY",
-      zipCode: "10022",
-      country: "United States",
-      isDefault: false,
-      type: "Work",
-    },
+  
   ]);
 
   const [isAdding, setIsAdding] = useState(false);

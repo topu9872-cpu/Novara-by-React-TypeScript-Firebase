@@ -18,8 +18,6 @@ type LocationState = {
   quantity?: number;
 };
 
-const STRIPE_FUNCTION_URL =
-  "http://127.0.0.1:5001/novara-7b539/asia-southeast1/createCheckoutSession";
 
 const Checkout: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -169,7 +167,7 @@ const handleStripeCheckout = async (e: React.FormEvent) => {
 
     console.log("Stripe checkout payload:", payload);
 
-    const response = await fetch(STRIPE_FUNCTION_URL, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/createCheckoutSession`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

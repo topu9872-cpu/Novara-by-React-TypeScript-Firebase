@@ -1,23 +1,20 @@
-import { onAuthStateChanged } from "firebase/auth";
-import { useEffect, useState } from "react";
-import { auth, db } from "../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { Outlet } from "react-router";
+import DashboardSidebar from "../DashboardComponents/DashboardSidebar";
 
-const layout = ({ children }: any) => {
-  const [role, setRole] = useState("");
+const AdminLayout = () => {
+  return (
+    <div className="min-h-screen bg-neutral-50 mt-2">
+      {/* Sidebar handles its own desktop layout and mobile toggle header */}
+      <DashboardSidebar />
 
-  useEffect(() => {
-    const unSubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        setRole(userDoc.data()?.role || "");
-      }
-    });
-    return unSubscribe;
-  }, []);
-  if (!role) return;
-
-  return <div>{children}</div>;
+      {/* Main Content Area */}
+      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen p-4 sm:p-6 lg:p-8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
 };
 
-export default layout;
+export default AdminLayout;

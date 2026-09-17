@@ -6,20 +6,21 @@ import StatsBar from "../Components/Home/StatsBar";
 import Subscribe from "../Components/Home/Subscribe";
 import { SummerSale } from "../Components/Home/SummerSale";
 import WhyChooseNovara from "../Components/Home/WhyChooseNovara";
-
+import HomeNotification from "../Notification/HomeNotification";
 
 const Home = () => {
   return (
     <div>
-       <Banner/>
-       <StatsBar/>
-       <ShopByCategory/>
-       <HeroBanner/>
+      <HomeNotification />
+      <Banner />
+      <StatsBar />
+      <ShopByCategory />
+      <HeroBanner />
 
-       <ProductCard/>
-       <SummerSale/>
-       <WhyChooseNovara/>
-       <Subscribe/>
+      <ProductCard />
+      <SummerSale />
+      <WhyChooseNovara />
+      <Subscribe />
     </div>
   );
 };

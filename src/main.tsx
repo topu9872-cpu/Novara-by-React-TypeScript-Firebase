@@ -25,6 +25,11 @@ import { SupportComponent } from "./pages/SupportComponent";
 import ForgotPassword from "./pages/ResetPasswordWithCode";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Dashboard from "./Dashboard/Dashboard";
+import AdminLayout from "./Dashboard/layout";
+import orders from "./Dashboard/orders";
+import products from "./Dashboard/products";
+import customers from "./Dashboard/customers";
+import payments from "./Dashboard/payments";
 
 const router = createBrowserRouter([
   {
@@ -106,14 +111,31 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path:'/dashboard',
-    Component:Dashboard,
-    children:[
+    path: "/dashboard",
+    Component: AdminLayout,
+    children: [
       {
-        
-      }
-    ]
-  }
+        index: true,
+        Component: Dashboard,
+      },
+      {
+        path: "/dashboard/products",
+        Component: products,
+      },
+      {
+        path: "/dashboard/orders",
+        Component: orders,
+      },
+      {
+        path: "/dashboard/customers",
+        Component: customers,
+      },
+      {
+        path: "/dashboard/payments",
+        Component: payments,
+      },
+    ],
+  },
 ]);
 
 export default App;

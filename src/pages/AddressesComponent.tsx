@@ -12,7 +12,11 @@ import {
   Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAddress, saveAddress } from "../services/productService";
+import {
+  deleteAddress,
+  getAddress,
+  saveAddress,
+} from "../services/productService";
 import type { Address } from "../types/Address";
 import { auth } from "../firebase/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
@@ -41,7 +45,6 @@ export const AddressesComponent: React.FC = () => {
   // --------------------------------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-
       setUser(currentUser);
 
       if (!currentUser) {
@@ -177,8 +180,22 @@ export const AddressesComponent: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id:string) => {
-    toast.success('')
+  const handleDelete = async () => {
+    if (!user?.uid) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    try {
+      await deleteAddress(user.uid);
+
+      setAddress(null);
+
+      toast.success("Address deleted successfully");
+    } catch (error) {
+      console.error("Delete address error:", error);
+      toast.error("Failed to delete address");
+    }
   };
 
   return (
@@ -194,15 +211,6 @@ export const AddressesComponent: React.FC = () => {
             Manage where your packages are delivered.
           </p>
         </div>
-
-        {!address && !isAdding && !loading && (
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
-          >
-            Add Address
-          </button>
-        )}
       </div>
 
       {/* Add / Edit Form */}
@@ -384,9 +392,8 @@ export const AddressesComponent: React.FC = () => {
           <Loader2 size={20} className="animate-spin text-emerald-600" />
         </div>
       ) : address ? (
-        /* Address Card */
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="relative bg-white border border-emerald-600 ring-1 ring-emerald-600/20 rounded-2xl p-5 shadow-xs space-y-3">
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-sm text-left bg-white border border-emerald-600 ring-1 ring-emerald-600/20 rounded-2xl p-5 shadow-xs space-y-3">
             {/* Top */}
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-700">
@@ -398,7 +405,6 @@ export const AddressesComponent: React.FC = () => {
               </span>
 
               <div className="flex items-center gap-1">
-                {/* Edit */}
                 <button
                   onClick={handleEdit}
                   className="text-neutral-400 hover:text-emerald-600 transition-colors p-1"
@@ -407,9 +413,8 @@ export const AddressesComponent: React.FC = () => {
                   <Pencil size={16} />
                 </button>
 
-                {/* Delete */}
                 <button
-                  onClick={() => handleDelete(address.id)}
+                  onClick={handleDelete}
                   className="text-neutral-400 hover:text-red-600 transition-colors p-1"
                   title="Delete address"
                 >
@@ -422,7 +427,6 @@ export const AddressesComponent: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-neutral-900 font-bold text-sm">
                 <UserIcon size={14} className="text-neutral-400 shrink-0" />
-
                 {address.fullName}
               </div>
 
@@ -433,7 +437,6 @@ export const AddressesComponent: React.FC = () => {
 
               <div className="flex items-center gap-2 text-xs text-neutral-500 pt-1">
                 <PhoneIcon size={13} className="text-neutral-400 shrink-0" />
-
                 {address.phone}
               </div>
             </div>

@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MapPin,
-  Plus,
   Trash2,
   Check,
   Home,
@@ -10,84 +9,136 @@ import {
   Loader2,
   Phone as PhoneIcon,
   User as UserIcon,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Address {
-  id: string;
-  fullName: string;
-  phone: string;
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  isDefault: boolean;
-  type: "Home" | "Work" | "Other";
-}
+import { getAddress, saveAddress } from "../services/productService";
+import type { Address } from "../types/Address";
+import { auth } from "../firebase/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 export const AddressesComponent: React.FC = () => {
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: "addr-1",
-      fullName: "Alex Johnson",
-      phone: "+1 (555) 234-5678",
-      street: "123 Maple Street, Apt 4B",
-      city: "New York",
-      state: "NY",
-      zipCode: "10001",
-      country: "United States",
-      isDefault: true,
-      type: "Home",
-    },
-  
-  ]);
+  const [user, setUser] = useState<User | null>(null);
+  const [address, setAddress] = useState<Address | null>(null);
 
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form states for new address
+  // Form states
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zipCode, setZipCode] = useState("");
-  const [country, ] = useState("United States");
+  const [country, setCountry] = useState("");
   const [type, setType] = useState<"Home" | "Work" | "Other">("Home");
 
-  const handleSetDefault = (id: string) => {
-    setAddresses(
-      addresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === id,
-      })),
-    );
-    toast.success("Default shipping address updated");
+  // --------------------------------
+  // Listen for Firebase Auth changes
+  // --------------------------------
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+
+      setUser(currentUser);
+
+      if (!currentUser) {
+        setAddress(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const fetchAddress = async () => {
+      try {
+        setLoading(true);
+
+        const data = await getAddress(user.uid);
+
+        setAddress(data);
+      } catch (error) {
+        console.error("Fetch address error:", error);
+        toast.error("Failed to load address");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAddress();
+  }, [user?.uid]);
+
+  // --------------------------------
+  // Reset form
+  // --------------------------------
+  const resetForm = () => {
+    setFullName("");
+    setPhone("");
+    setStreet("");
+    setCity("");
+    setState("");
+    setZipCode("");
+    setCountry("");
+    setType("Home");
   };
 
-  const handleDelete = (id: string) => {
-    const target = addresses.find((a) => a.id === id);
-    if (target?.isDefault && addresses.length > 1) {
-      toast.error(
-        "Please set another address as default before deleting this one.",
-      );
-      return;
-    }
-    setAddresses(addresses.filter((addr) => addr.id !== id));
-    toast.success("Address deleted successfully");
+  // --------------------------------
+  // Open Add Form
+  // --------------------------------
+  const handleOpenAdd = () => {
+    resetForm();
+    setIsEditing(false);
+    setIsAdding(true);
   };
 
-  const handleAddAddress = (e: React.FormEvent) => {
+  // --------------------------------
+  // Open Edit Form
+  // --------------------------------
+  const handleEdit = () => {
+    if (!address) return;
+
+    setFullName(address.fullName);
+    setPhone(address.phone);
+    setStreet(address.street);
+    setCity(address.city);
+    setState(address.state);
+    setZipCode(address.zipCode);
+    setCountry(address.country);
+    setType(address.type);
+
+    setIsEditing(true);
+    setIsAdding(true);
+  };
+
+  // --------------------------------
+  // Save / Update Address
+  // --------------------------------
+  const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user?.uid) {
+      return toast.error("User not authenticated");
+    }
+
     if (!fullName || !street || !city || !zipCode || !phone) {
       return toast.error("Please fill in all required address fields");
     }
 
     setSaving(true);
-    setTimeout(() => {
-      const newAddress: Address = {
-        id: `addr-${Date.now()}`,
+
+    try {
+      const addressData: Address = {
+        id: address?.id ?? `addr-${Date.now()}`,
+        uid: user.uid,
+        email: user.email ?? undefined,
+        displayName: user.displayName ?? undefined,
+
         fullName,
         phone,
         street,
@@ -95,23 +146,39 @@ export const AddressesComponent: React.FC = () => {
         state,
         zipCode,
         country,
-        isDefault: addresses.length === 0, // Make default if it's the first one
+        isDefault: true,
+
         type,
+
+        // Keep original createdAt when editing
+        createdAt: address?.createdAt ?? Date.now(),
       };
 
-      setAddresses([...addresses, newAddress]);
-      toast.success("New address added successfully!");
-      setSaving(false);
-      setIsAdding(false);
+      await saveAddress(addressData);
 
-      // Reset form
-      setFullName("");
-      setPhone("");
-      setStreet("");
-      setCity("");
-      setState("");
-      setZipCode("");
-    }, 500);
+      setAddress(addressData);
+
+      toast.success(
+        isEditing
+          ? "Address updated successfully!"
+          : "Address saved successfully!",
+      );
+
+      setIsAdding(false);
+      setIsEditing(false);
+      resetForm();
+    } catch (error) {
+      console.error("Save address error:", error);
+      toast.error(
+        isEditing ? "Failed to update address" : "Failed to save address",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id:string) => {
+    toast.success('')
   };
 
   return (
@@ -122,44 +189,54 @@ export const AddressesComponent: React.FC = () => {
           <h2 className="text-xl font-bold text-neutral-900">
             Shipping Addresses
           </h2>
+
           <p className="text-xs text-neutral-500">
             Manage where your packages are delivered.
           </p>
         </div>
-        {!isAdding && (
+
+        {!address && !isAdding && !loading && (
           <button
-            onClick={() => setIsAdding(true)}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            onClick={handleOpenAdd}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
           >
-            <Plus size={16} /> Add New Address
+            Add Address
           </button>
         )}
       </div>
 
-      {/* Add Address Form Modal/Card */}
+      {/* Add / Edit Form */}
       {isAdding && (
         <form
           onSubmit={handleAddAddress}
           className="bg-white border border-emerald-200 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200"
         >
+          {/* Form Header */}
           <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
             <h3 className="text-sm font-bold text-neutral-800">
-              Add New Shipping Address
+              {isEditing ? "Edit Shipping Address" : "Add New Shipping Address"}
             </h3>
+
             <button
               type="button"
-              onClick={() => setIsAdding(false)}
+              onClick={() => {
+                setIsAdding(false);
+                setIsEditing(false);
+                resetForm();
+              }}
               className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-colors"
             >
               <X size={16} />
             </button>
           </div>
 
+          {/* Name + Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
                 Full Name
               </label>
+
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -167,36 +244,59 @@ export const AddressesComponent: React.FC = () => {
                 className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
             </div>
+
             <div>
               <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
                 Phone Number
               </label>
+
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 (555) 000-0000"
+                placeholder="+880 1XXXXXXXXX"
                 className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
-              Street Address
-            </label>
-            <input
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              placeholder="House/Apartment, Street name"
-              className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
-            />
+          {/* Country + Street */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
+                Country
+              </label>
+
+              <input
+                type="text"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                autoComplete="country-name"
+                placeholder="Enter country"
+                className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
+                Street Address
+              </label>
+
+              <input
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                placeholder="House/Apartment, Street name"
+                className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
+              />
+            </div>
           </div>
 
+          {/* City + State + Zip */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
                 City
               </label>
+
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
@@ -204,10 +304,12 @@ export const AddressesComponent: React.FC = () => {
                 className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
             </div>
+
             <div>
               <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
                 State / Province
               </label>
+
               <input
                 value={state}
                 onChange={(e) => setState(e.target.value)}
@@ -215,10 +317,12 @@ export const AddressesComponent: React.FC = () => {
                 className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
             </div>
+
             <div className="col-span-2 sm:col-span-1">
               <label className="block text-xs font-semibold tracking-wider text-neutral-600 uppercase mb-1">
                 Zip / Postal Code
               </label>
+
               <input
                 value={zipCode}
                 onChange={(e) => setZipCode(e.target.value)}
@@ -228,8 +332,8 @@ export const AddressesComponent: React.FC = () => {
             </div>
           </div>
 
+          {/* Type + Buttons */}
           <div className="flex items-center justify-between pt-2">
-            {/* Address Type Selector */}
             <div className="flex items-center gap-2">
               {(["Home", "Work", "Other"] as const).map((t) => (
                 <button
@@ -250,87 +354,125 @@ export const AddressesComponent: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsAdding(false)}
+                onClick={() => {
+                  setIsAdding(false);
+                  setIsEditing(false);
+                  resetForm();
+                }}
                 className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition-colors"
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
                 disabled={saving}
                 className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 {saving && <Loader2 size={14} className="animate-spin" />}
-                Save Address
+
+                {isEditing ? "Update Address" : "Save Address"}
               </button>
             </div>
           </div>
         </form>
       )}
 
-      {/* Addresses List Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {addresses.map((addr) => (
-          <div
-            key={addr.id}
-            className={`relative bg-white border rounded-2xl p-5 shadow-xs transition-all space-y-3 ${
-              addr.isDefault
-                ? "border-emerald-600 ring-1 ring-emerald-600/20"
-                : "border-neutral-100 hover:border-neutral-200"
-            }`}
-          >
-            {/* Top Tag & Delete */}
+      {/* Loading */}
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={20} className="animate-spin text-emerald-600" />
+        </div>
+      ) : address ? (
+        /* Address Card */
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="relative bg-white border border-emerald-600 ring-1 ring-emerald-600/20 rounded-2xl p-5 shadow-xs space-y-3">
+            {/* Top */}
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-700">
-                {addr.type === "Home" && <Home size={12} />}
-                {addr.type === "Work" && <Briefcase size={12} />}
-                {addr.type === "Other" && <MapPin size={12} />}
-                {addr.type}
+                {address.type === "Home" && <Home size={12} />}
+                {address.type === "Work" && <Briefcase size={12} />}
+                {address.type === "Other" && <MapPin size={12} />}
+
+                {address.type}
               </span>
 
-              <button
-                onClick={() => handleDelete(addr.id)}
-                className="text-neutral-400 hover:text-red-600 transition-colors p-1"
-                title="Delete address"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Edit */}
+                <button
+                  onClick={handleEdit}
+                  className="text-neutral-400 hover:text-emerald-600 transition-colors p-1"
+                  title="Edit address"
+                >
+                  <Pencil size={16} />
+                </button>
+
+                {/* Delete */}
+                <button
+                  onClick={() => handleDelete(address.id)}
+                  className="text-neutral-400 hover:text-red-600 transition-colors p-1"
+                  title="Delete address"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Address Details */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-neutral-900 font-bold text-sm">
                 <UserIcon size={14} className="text-neutral-400 shrink-0" />
-                {addr.fullName}
+
+                {address.fullName}
               </div>
+
               <p className="text-xs text-neutral-600 leading-relaxed">
-                {addr.street}, {addr.city}, {addr.state} {addr.zipCode},{" "}
-                {addr.country}
+                {address.street}, {address.city}, {address.state}{" "}
+                {address.zipCode}, {address.country}
               </p>
+
               <div className="flex items-center gap-2 text-xs text-neutral-500 pt-1">
                 <PhoneIcon size={13} className="text-neutral-400 shrink-0" />
-                {addr.phone}
+
+                {address.phone}
               </div>
             </div>
 
-            {/* Footer Action */}
-            <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
-              {addr.isDefault ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  <Check size={14} /> Default Address
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleSetDefault(addr.id)}
-                  className="text-xs font-semibold text-neutral-600 hover:text-emerald-700 transition-colors"
-                >
-                  Set as Default
-                </button>
-              )}
+            {/* Created At */}
+            <p className="text-[11px] text-neutral-400">
+              Added on {new Date(address.createdAt).toLocaleDateString()}
+            </p>
+
+            {/* Default */}
+            <div className="pt-3 border-t border-neutral-100">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                <Check size={14} />
+                Default Address
+              </span>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center py-12 px-6 bg-white border border-neutral-100 rounded-2xl">
+          <MapPin size={20} className="text-neutral-400 mb-3" />
+
+          <h3 className="text-sm font-bold text-neutral-800">
+            No Shipping Address
+          </h3>
+
+          <p className="text-xs text-neutral-500 mt-1">
+            You haven't added a shipping address yet.
+          </p>
+
+          <button
+            onClick={handleOpenAdd}
+            className="mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+          >
+            Add Address
+          </button>
+        </div>
+      )}
     </div>
   );
 };

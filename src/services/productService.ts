@@ -18,6 +18,7 @@ import type { Orders } from "../types/Orders";
 import type { CartItem } from "../types/Cart";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { toast } from "sonner";
+import type { Address } from "../types/Address";
 
 const getCurrentUser = async (): Promise<User | null> => {
   const auth = getAuth();
@@ -276,4 +277,37 @@ export const getCartItems = async (): Promise<CartItem[]> => {
     toast.error("Failed to load cart");
     return [];
   }
+};
+
+export const saveAddress = async (addressData: Address) => {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const userRef = doc(db, "address", user.uid);
+  await setDoc(
+    userRef,
+    {
+      address: {
+        ...addressData,
+
+        isDefault: true,
+      },
+    },
+    {
+      merge: true,
+    },
+  );
+};
+
+export const getAddress = async (userId: string) => {
+  const addressRef = doc(db, "address", userId);
+
+  const snapshot = await getDoc(addressRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const data = snapshot.data();
+
+  return data.address as Address;
 };

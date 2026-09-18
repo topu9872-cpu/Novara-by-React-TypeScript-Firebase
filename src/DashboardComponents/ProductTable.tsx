@@ -1,4 +1,11 @@
-import { ChevronLeft, ChevronRight, Edit, Search, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Product } from "../types/Product";
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
@@ -222,8 +229,8 @@ export default function ProductTable({
       )}
 
       {/* Table */}
-      <div className="">
-        <table className="">
+      <div className="overflow-auto">
+        <table>
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
               <th className="w-12 px-5 py-3">
@@ -383,7 +390,7 @@ export default function ProductTable({
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg   px-3 text-xs font-medium text-slate-700 transition "
                       >
                         <Edit size={15} />
-                        Edit
+                        
                       </button>
 
                       <button
@@ -392,7 +399,6 @@ export default function ProductTable({
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-red-600 transition hover:bg-red-50"
                       >
                         <Trash2 size={15} />
-                        Delete
                       </button>
                     </div>
                     {deleteProduct && (

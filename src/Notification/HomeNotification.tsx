@@ -63,7 +63,7 @@ const HomeNotification = () => {
           </div>
         ),
         {
-          duration: 120000,
+          duration: 60000,
           position: "top-right",
           unstyled: true,
         },

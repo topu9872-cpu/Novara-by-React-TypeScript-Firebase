@@ -17,4 +17,5 @@ export interface Product {
   rating: string | number;
 
   stock: number;
+  status?: "Active" | "Inactive" | "Out of Stock";
 }

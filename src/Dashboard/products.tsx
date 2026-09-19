@@ -1,107 +1,64 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProductForm from "../DashboardComponents/ProductForm";
 import ProductTable from "../DashboardComponents/ProductTable";
 import type { Product } from "../types/Product";
-
-const initialProducts: Product[] = [
-  {
-    id: "1",
-    category: "living-room",
-    color: "Brown",
-    description: "Premium luxury wooden sofa for modern living room.",
-    image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-    material: "Teak Wood",
-    name: "Luxury Wooden Sofa",
-    price: "1200",
-    rating: "4.8",
-    stock: 10,
-  },
-  {
-    id: "2",
-    category: "living-room",
-    color: "Brown",
-    description: "Premium luxury wooden sofa for modern living room.",
-    image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-    material: "Teak Wood",
-    name: "Luxury Wooden Sofa",
-    price: "1200",
-    rating: "4.8",
-    stock: 10,
-  },
-  {
-    id: "3",
-    category: "living-room",
-    color: "Brown",
-    description: "Premium luxury wooden sofa for modern living room.",
-    image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-    material: "Teak Wood",
-    name: "Luxury Wooden Sofa",
-    price: "1200",
-    rating: "4.8",
-    stock: 10,
-  },
-  {
-    id: "4",
-    category: "living-room",
-    color: "Brown",
-    description: "Premium luxury wooden sofa for modern living room.",
-    image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-    material: "Teak Wood",
-    name: "Luxury Wooden Sofa",
-    price: "1200",
-    rating: "4.8",
-    stock: 10,
-  },
-  {
-    id: "5",
-    category: "living-room",
-    color: "Brown",
-    description: "Premium luxury wooden sofa for modern living room.",
-    image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-    material: "Teak Wood",
-    name: "Luxury Wooden Sofa",
-    price: "1200",
-    rating: "4.8",
-    stock: 10,
-  },
-];
+import { getAllProducts } from "../services/productService";
 
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
 
 export default function Products() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // 1. Initialize as an empty array to prevent undefined map/filter errors
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [productStatuses, setProductStatuses] = useState<
     Record<string, ProductStatus>
-  >(() =>
-    Object.fromEntries(
-      initialProducts.map((product) => [
-        product.id,
-        product.stock === 0 ? "Out of Stock" : "Active",
-      ]),
-    ),
-  );
+  >({});
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-
   const [isFormOpen, setIsFormOpen] = useState(false);
-
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // 2. Fetch products and initialize statuses once data arrives
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+
+        const data = await getAllProducts();
+        const fetchedProducts = data.products || [];
+
+        setProducts(fetchedProducts);
+
+        const initialStatuses: Record<string, ProductStatus> =
+          Object.fromEntries(
+            fetchedProducts.map((product) => [
+              product.id,
+              product.stock === 0 ? "Out of Stock" : "Active",
+            ]),
+          );
+
+        setProductStatuses(initialStatuses);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const stats = useMemo(() => {
     return {
       total: products.length,
-
       active: products.filter(
         (product) => productStatuses[product.id] === "Active",
       ).length,
-
       inactive: products.filter(
         (product) => productStatuses[product.id] === "Inactive",
       ).length,
-
       outOfStock: products.filter((product) => product.stock === 0).length,
-
       lowStock: products.filter(
         (product) => product.stock > 0 && product.stock <= 5,
       ).length,
@@ -110,12 +67,10 @@ export default function Products() {
 
   const handleAddProduct = (product: Product) => {
     setProducts((prev) => [product, ...prev]);
-
     setProductStatuses((prev) => ({
       ...prev,
       [product.id]: product.stock === 0 ? "Out of Stock" : "Active",
     }));
-
     setIsFormOpen(false);
   };
 
@@ -140,13 +95,11 @@ export default function Products() {
 
   const handleDeleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((product) => product.id !== id));
-
     setProductStatuses((prev) => {
       const updated = { ...prev };
       delete updated[id];
       return updated;
     });
-
     setSelectedProducts((prev) => prev.filter((item) => item !== id));
   };
 
@@ -159,11 +112,9 @@ export default function Products() {
 
     setProductStatuses((prev) => {
       const updated = { ...prev };
-
       selectedProducts.forEach((id) => {
         delete updated[id];
       });
-
       return updated;
     });
 
@@ -173,10 +124,7 @@ export default function Products() {
   const handleToggleStatus = (id: string) => {
     setProductStatuses((prev) => {
       const currentStatus = prev[id];
-
-      if (currentStatus === "Out of Stock") {
-        return prev;
-      }
+      if (currentStatus === "Out of Stock") return prev;
 
       return {
         ...prev,
@@ -189,35 +137,23 @@ export default function Products() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.id !== id) return product;
-
         const newStock = Math.max(0, product.stock + change);
-
-        return {
-          ...product,
-          stock: newStock,
-        };
+        return { ...product, stock: newStock };
       }),
     );
 
     setProductStatuses((prev) => {
       const currentProduct = products.find((product) => product.id === id);
-
       if (!currentProduct) return prev;
 
       const newStock = Math.max(0, currentProduct.stock + change);
 
       if (newStock === 0) {
-        return {
-          ...prev,
-          [id]: "Out of Stock",
-        };
+        return { ...prev, [id]: "Out of Stock" };
       }
 
       if (prev[id] === "Out of Stock") {
-        return {
-          ...prev,
-          [id]: "Active",
-        };
+        return { ...prev, [id]: "Active" };
       }
 
       return prev;
@@ -234,13 +170,20 @@ export default function Products() {
     setIsFormOpen(true);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-slate-500">Loading products...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Products</h1>
-
           <p className="mt-1 text-sm text-slate-500">
             Manage your Novara products and inventory.
           </p>
@@ -297,7 +240,6 @@ function Stat({ title, value }: { title: string; value: number }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <p className="text-sm text-slate-500">{title}</p>
-
       <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
     </div>
   );

@@ -3,6 +3,8 @@ import ProductForm from "../DashboardComponents/ProductForm";
 import ProductTable from "../DashboardComponents/ProductTable";
 import type { Product } from "../types/Product";
 import { getAllProducts } from "../services/productService";
+import { updateProductStatus } from "../services/AdminDashboard";
+import { toast } from "sonner";
 
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
 
@@ -121,17 +123,35 @@ export default function Products() {
     setSelectedProducts([]);
   };
 
-  const handleToggleStatus = (id: string) => {
-    setProductStatuses((prev) => {
-      const currentStatus = prev[id];
-      if (currentStatus === "Out of Stock") return prev;
+const handleToggleStatus = async (id: string) => {
+  const product = products.find((product) => product.id === id);
 
-      return {
-        ...prev,
-        [id]: currentStatus === "Active" ? "Inactive" : "Active",
-      };
-    });
-  };
+  if (!product || product.stock === 0) return;
+
+  const currentStatus = product.status || "Active";
+
+  const newStatus: ProductStatus =
+    currentStatus === "Active" ? "Inactive" : "Active";
+
+  try {
+    await updateProductStatus(id, newStatus);
+
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === id
+          ? {
+              ...product,
+              status: newStatus,
+            }
+          : product,
+      ),
+    );
+      toast.success(`Product status changed to ${newStatus}`);
+  } catch (error) {
+    console.error("Failed to update product status:", error);
+     toast.error("Failed to update product status");
+  }
+};
 
   const handleStockChange = (id: string, change: number) => {
     setProducts((prev) =>

@@ -278,8 +278,7 @@ export default function ProductTable({
                 const currentStatus =
                   product.stock === 0
                     ? "Out of Stock"
-                    : productStatuses[product.id] || "Active";
-
+                    : product.status || "Active";
                 return (
                   <tr
                     key={product.id}
@@ -345,6 +344,7 @@ export default function ProductTable({
                                 : "bg-slate-400"
                           }`}
                         />
+
                         {currentStatus}
                       </button>
                     </td>

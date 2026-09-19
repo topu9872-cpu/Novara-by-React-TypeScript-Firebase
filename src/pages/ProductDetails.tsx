@@ -18,11 +18,11 @@ const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
 
-  // Safely extract addToCart from your global context
   const { addToCart } = useCart() as unknown as {
     addToCart?: (
       product: Product & { quantity?: number },
@@ -33,7 +33,9 @@ const ProductDetails: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
+
       setLoading(true);
+
       try {
         const data = await getProductById(id);
         setProduct(data);
@@ -47,21 +49,46 @@ const ProductDetails: React.FC = () => {
     fetchProduct();
   }, [id]);
 
+  // ==========================================
+  // ADD TO CART
+  // ==========================================
+
   const handleAddToCart = async () => {
     if (!product) return;
+
+    // Product is out of stock
+    if (product.stock <= 0) {
+      toast.error("This product is out of stock.");
+      return;
+    }
+
+    // Quantity is greater than available stock
+    if (quantity > product.stock) {
+      toast.error(`Only ${product.stock} item(s) available.`);
+      setQuantity(product.stock);
+      return;
+    }
+
     if (addToCart) {
-      // Pass both product and quantity correctly
-      // addToCart({ ...product, quantity }, quantity);
       await AddToCart(product, quantity);
-      toast.success(`Added ${quantity} ${product.name} to your cart!`);
+
+      toast.success(
+        `Added ${quantity} ${
+          quantity === 1 ? "item" : "items"
+        } of ${product.name} to your cart!`,
+      );
     } else {
       toast.error("Cart action unavailable.");
     }
   };
 
-  const user = auth.currentUser;
+  // ==========================================
+  // BUY NOW
+  // ==========================================
 
   const handleBuyNow = () => {
+    const user = auth.currentUser;
+
     if (!user) {
       navigate("/login", {
         state: { from: location },
@@ -70,6 +97,19 @@ const ProductDetails: React.FC = () => {
     }
 
     if (!product) return;
+
+    // Product is out of stock
+    if (product.stock <= 0) {
+      toast.error("This product is out of stock.");
+      return;
+    }
+
+    // Quantity is greater than available stock
+    if (quantity > product.stock) {
+      toast.error(`Only ${product.stock} item(s) available.`);
+      setQuantity(product.stock);
+      return;
+    }
 
     if (addToCart) {
       addToCart({ ...product, quantity }, quantity);
@@ -83,6 +123,10 @@ const ProductDetails: React.FC = () => {
     });
   };
 
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-neutral-500 font-medium">
@@ -91,15 +135,21 @@ const ProductDetails: React.FC = () => {
     );
   }
 
+  // ==========================================
+  // PRODUCT NOT FOUND
+  // ==========================================
+
   if (!product) {
     return (
       <div className="max-w-7xl mx-auto px-5 py-20 text-center">
         <h2 className="text-2xl font-bold text-neutral-800 mb-4">
           Product Not Found
         </h2>
+
         <p className="text-neutral-500 mb-6">
           The product you are looking for doesn't exist or has been removed.
         </p>
+
         <button
           onClick={() => navigate("/shop")}
           className="bg-[#09221F] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#0F302A] transition-all cursor-pointer"
@@ -115,6 +165,9 @@ const ProductDetails: React.FC = () => {
       ? parseFloat(product.rating)
       : product.rating || 0;
 
+  const isOutOfStock = product.stock <= 0;
+  const isMaxQuantity = quantity >= product.stock;
+
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10 mb-16">
       {/* Back Button */}
@@ -127,21 +180,30 @@ const ProductDetails: React.FC = () => {
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-        {/* Product Image Container */}
+        {/* Product Image */}
         <div className="w-full aspect-square bg-neutral-100 rounded-3xl overflow-hidden shadow-sm flex items-center justify-center border border-neutral-100 relative">
           <img
             src={product.image}
             alt={product.name}
             className="w-full h-full object-cover object-center"
           />
+
+          {isOutOfStock && (
+            <div className="absolute top-4 left-4">
+              <span className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 text-xs font-semibold">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Product Info Section */}
+        {/* Product Info */}
         <div className="flex flex-col space-y-6">
           <div>
             <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full mb-3">
               {product.category || "General"}
             </span>
+
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight">
               {product.name}
             </h1>
@@ -149,23 +211,49 @@ const ProductDetails: React.FC = () => {
 
           {/* Price & Rating */}
           <div className="flex items-center justify-between border-b border-neutral-100 pb-6">
-            <span className="text-3xl font-extrabold text-neutral-900">
-              ${product.price}
-            </span>
+            <div>
+              <span className="text-3xl font-extrabold text-neutral-900">
+                ${product.price}
+              </span>
+
+              {/* Stock Information */}
+              <div className="mt-1">
+                {isOutOfStock ? (
+                  <span className="text-xs font-semibold text-red-500">
+                    Out of stock
+                  </span>
+                ) : (
+                  <span
+                    className={`text-xs font-medium ${
+                      product.stock <= 5
+                        ? "text-orange-500"
+                        : "text-neutral-500"
+                    }`}
+                  >
+                    {product.stock} {product.stock === 1 ? "item" : "items"}{" "}
+                    available
+                  </span>
+                )}
+              </div>
+            </div>
 
             <div className="flex items-center gap-1.5 text-sm">
               <div className="flex items-center gap-0.5 text-amber-400">
                 {Array.from({ length: 5 }).map((_, index) => {
                   const fill = Math.min(Math.max(ratingNum - index, 0), 1);
+
                   return (
                     <span
                       key={index}
                       className="relative inline-block text-neutral-300"
                     >
                       <FaStar />
+
                       <span
                         className="absolute inset-0 overflow-hidden text-amber-400"
-                        style={{ width: `${fill * 100}%` }}
+                        style={{
+                          width: `${fill * 100}%`,
+                        }}
                       >
                         <FaStar />
                       </span>
@@ -173,6 +261,7 @@ const ProductDetails: React.FC = () => {
                   );
                 })}
               </div>
+
               <span className="text-neutral-500 font-medium text-xs">
                 ({ratingNum.toFixed(1)})
               </span>
@@ -184,74 +273,107 @@ const ProductDetails: React.FC = () => {
             <h3 className="font-semibold text-neutral-900 text-sm">
               Description
             </h3>
+
             <p className="text-neutral-600 text-sm leading-relaxed">
               {product.description ||
                 "Experience top-tier quality and design crafted to fit your everyday lifestyle seamlessly. Premium materials combined with modern aesthetics."}
             </p>
           </div>
 
-          {/* Quantity & Action Buttons */}
+          {/* Quantity & Actions */}
           <div className="space-y-4 pt-2">
             <div className="flex items-center gap-4">
               <span className="text-sm font-semibold text-neutral-900">
                 Quantity
               </span>
+
               <div className="flex items-center border border-neutral-200 rounded-xl bg-white overflow-hidden shadow-xs">
+                {/* MINUS */}
                 <button
                   type="button"
+                  disabled={quantity <= 1 || isOutOfStock}
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="px-3.5 py-2 text-neutral-600 hover:bg-neutral-100 transition-colors font-bold cursor-pointer"
+                  className="px-3.5 py-2 text-neutral-600 hover:bg-neutral-100 transition-colors font-bold cursor-pointer disabled:text-neutral-300 disabled:cursor-not-allowed"
                 >
                   -
                 </button>
-                <span className="px-4 text-sm font-semibold text-neutral-900">
+
+                {/* QUANTITY */}
+                <span className="px-4 text-sm font-semibold text-neutral-900 min-w-12 text-center">
                   {quantity}
                 </span>
+
+                {/* PLUS */}
                 <button
                   type="button"
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                  className="px-3.5 py-2 text-neutral-600 hover:bg-neutral-100 transition-colors font-bold cursor-pointer"
+                  disabled={isOutOfStock || isMaxQuantity}
+                  onClick={() => {
+                    if (quantity >= product.stock) {
+                      toast.error(`Only ${product.stock} item(s) available.`);
+                      return;
+                    }
+
+                    setQuantity((prev) => prev + 1);
+                  }}
+                  className="px-3.5 py-2 text-neutral-600 hover:bg-neutral-100 transition-colors font-bold cursor-pointer disabled:text-neutral-300 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
               </div>
+
+              {/* Available Stock */}
+              {!isOutOfStock && (
+                <span className="text-xs text-neutral-400">
+                  {product.stock} available
+                </span>
+              )}
             </div>
 
-            {/* Buttons Row */}
+            {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 w-full">
+              {/* ADD TO CART */}
               <button
                 onClick={handleAddToCart}
-                className="flex-1 h-12 bg-white text-[#09221F] border border-[#09221F] rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-emerald-50 transition-all shadow-xs active:scale-98 cursor-pointer"
+                disabled={isOutOfStock}
+                className="flex-1 h-12 bg-white text-[#09221F] border border-[#09221F] rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-emerald-50 transition-all shadow-xs active:scale-98 cursor-pointer disabled:border-neutral-200 disabled:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart size={18} />
-                <span>Add to Cart</span>
+
+                <span>{isOutOfStock ? "Out of Stock" : "Add to Cart"}</span>
               </button>
 
+              {/* BUY NOW */}
               <button
                 onClick={handleBuyNow}
-                className="flex-1 h-12 bg-[#09221F] text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-[#0F302A] transition-all shadow-md active:scale-98 cursor-pointer"
+                disabled={isOutOfStock}
+                className="flex-1 h-12 bg-[#09221F] text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-[#0F302A] transition-all shadow-md active:scale-98 cursor-pointer disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed"
               >
-                <span>Buy Now</span>
+                <span>{isOutOfStock ? "Out of Stock" : "Buy Now"}</span>
               </button>
             </div>
           </div>
 
-          {/* Perks / Features */}
+          {/* Perks */}
           <div className="grid grid-cols-3 gap-4 pt-6 border-t border-neutral-100 text-center">
             <div className="flex flex-col items-center p-3 rounded-2xl bg-neutral-50">
               <Truck className="w-5 h-5 text-emerald-700 mb-1.5" />
+
               <span className="text-[11px] font-semibold text-neutral-700">
                 Free Shipping
               </span>
             </div>
+
             <div className="flex flex-col items-center p-3 rounded-2xl bg-neutral-50">
               <RotateCcw className="w-5 h-5 text-emerald-700 mb-1.5" />
+
               <span className="text-[11px] font-semibold text-neutral-700">
                 Easy Returns
               </span>
             </div>
+
             <div className="flex flex-col items-center p-3 rounded-2xl bg-neutral-50">
               <ShieldCheck className="w-5 h-5 text-emerald-700 mb-1.5" />
+
               <span className="text-[11px] font-semibold text-neutral-700">
                 Secure Checkout
               </span>

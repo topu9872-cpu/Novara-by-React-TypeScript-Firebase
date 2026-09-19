@@ -50,22 +50,30 @@ export default function Products() {
 
     fetchProducts();
   }, []);
+const stats = useMemo(() => {
+  return {
+    total: products.length,
 
-  const stats = useMemo(() => {
-    return {
-      total: products.length,
-      active: products.filter(
-        (product) => productStatuses[product.id] === "Active",
-      ).length,
-      inactive: products.filter(
-        (product) => productStatuses[product.id] === "Inactive",
-      ).length,
-      outOfStock: products.filter((product) => product.stock === 0).length,
-      lowStock: products.filter(
-        (product) => product.stock > 0 && product.stock <= 5,
-      ).length,
-    };
-  }, [products, productStatuses]);
+    active: products.filter(
+      (product) =>
+        product.stock > 0 && product.status === "Active",
+    ).length,
+
+    inactive: products.filter(
+      (product) =>
+        product.stock > 0 && product.status === "Inactive",
+    ).length,
+
+    lowStock: products.filter(
+      (product) =>
+        product.stock > 0 && product.stock <= 5,
+    ).length,
+
+    outOfStock: products.filter(
+      (product) => product.stock === 0,
+    ).length,
+  };
+}, [products]);
 
   const handleAddProduct = (product: Product) => {
     setProducts((prev) => [product, ...prev]);

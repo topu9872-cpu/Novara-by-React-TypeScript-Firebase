@@ -16,7 +16,6 @@ export const Card: React.FC<CardProps> = ({ product }) => {
     const cardElement = cardRef.current;
     if (!cardElement) return;
 
-    // Direct mount animation to guarantee cards always fade in nicely
     const anim = gsap.fromTo(
       cardElement,
       {
@@ -41,66 +40,109 @@ export const Card: React.FC<CardProps> = ({ product }) => {
       ? parseFloat(product.rating)
       : product.rating || 0;
 
+  const isOutOfStock = product.stock === 0;
+  const isLowStock = product.stock > 0 && product.stock <= 5;
+
   return (
     <div
       ref={cardRef}
       className="product-card w-full bg-white rounded-2xl p-3 shadow-xs border border-neutral-100 opacity-0 flex flex-col justify-between hover:shadow-md transition-shadow"
     >
-      {/* Product Image Container */}
+      {/* Product Image */}
       <div className="relative w-full aspect-4/3 sm:aspect-square rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center mb-3">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-500"
         />
-      </div>
-      
-        {/* Card Details / Content */}
-        <div className="flex flex-col space-y-1.5">
-          <h3 className="font-semibold text-neutral-900 text-sm tracking-tight truncate">
-            {product.name}
-          </h3>
 
-          <div className="flex items-center justify-between pt-0.5">
+        {isOutOfStock && (
+          <div className="absolute top-2.5 left-2.5">
+            <span className="px-2.5 py-1 rounded-md bg-white/95 backdrop-blur-sm text-[10px] font-semibold text-red-600 shadow-sm border border-red-100">
+              Out of Stock
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Card Details */}
+      <div className="flex flex-col space-y-1.5">
+        <h3 className="font-semibold text-neutral-900 text-sm tracking-tight truncate">
+          {product.name}
+        </h3>
+
+        <div className="flex items-center justify-between pt-0.5">
+          <div>
             <span className="text-base font-bold text-neutral-900">
               ${product.price}
             </span>
 
-           <NavLink to={`/shop/${product.id}`}
-              aria-label="Add to Cart"
-              className="w-9 h-9 rounded-lg bg-[#09221F] text-white flex items-center justify-center hover:bg-[#0F302A] transition-all shadow-xs active:scale-95 cursor-pointer"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              </NavLink>
-          </div>
-
-          {/* Rating Stars Section */}
-          <div className="flex items-center gap-1 pt-0.5">
-            <div className="flex items-center gap-0.5 text-[11px]">
-              {Array.from({ length: 5 }).map((_, index) => {
-                const fill = Math.min(Math.max(ratingNum - index, 0), 1);
-
-                return (
-                  <span
-                    key={index}
-                    className="relative inline-block text-neutral-300"
-                  >
-                    <FaStar />
-                    <span
-                      className="absolute inset-0 overflow-hidden text-amber-400"
-                      style={{
-                        width: `${fill * 100}%`,
-                      }}
-                    >
-                      <FaStar />
-                    </span>
-                  </span>
-                );
-              })}
+            {/* Stock Count */}
+            <div className="mt-0.5">
+              {isOutOfStock ? (
+                <span className="text-[10px] font-medium text-red-500">
+                  Currently unavailable
+                </span>
+              ) : (
+                <span
+                  className={`text-[10px] font-medium ${
+                    isLowStock ? "text-orange-500" : "text-neutral-400"
+                  }`}
+                >
+                  {product.stock} {product.stock === 1 ? "item" : "items"} left
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Cart Button */}
+          {isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              aria-label="Out of Stock"
+              className="w-9 h-9 rounded-lg bg-neutral-100 text-neutral-300 flex items-center justify-center cursor-not-allowed"
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </button>
+          ) : (
+            <NavLink
+              to={`/shop/${product.id}`}
+              aria-label="View Product"
+              className="w-9 h-9 rounded-lg bg-[#09221F] text-white flex items-center justify-center hover:bg-[#0F302A] transition-all shadow-xs active:scale-95"
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </NavLink>
+          )}
         </div>
-   
+
+        {/* Rating */}
+        <div className="flex items-center gap-1 pt-0.5">
+          <div className="flex items-center gap-0.5 text-[11px]">
+            {Array.from({ length: 5 }).map((_, index) => {
+              const fill = Math.min(Math.max(ratingNum - index, 0), 1);
+
+              return (
+                <span
+                  key={index}
+                  className="relative inline-block text-neutral-300"
+                >
+                  <FaStar />
+
+                  <span
+                    className="absolute inset-0 overflow-hidden text-amber-400"
+                    style={{
+                      width: `${fill * 100}%`,
+                    }}
+                  >
+                    <FaStar />
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -10,6 +10,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  runTransaction,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
@@ -123,17 +124,104 @@ export const createOrder = async (
 
     const orderRef = doc(db, "orders", sessionId);
 
-    const order = {
-      ...orderData,
-      userId: orderData.userId,
-      createdAt: new Date(),
-    };
+    const result = await runTransaction(db, async (transaction) => {
+      // =====================================
+      // 1. CHECK STOCK FOR EVERY PRODUCT
+      // =====================================
 
-    await setDoc(orderRef, order, { merge: true });
+      const productsToUpdate = [];
 
-    return orderData;
+      for (const item of orderData.products) {
+        // IMPORTANT:
+        // item.id = Product document ID
+        const productRef = doc(db, "Products", item.id);
+
+        const productSnap = await transaction.get(productRef);
+
+        if (!productSnap.exists()) {
+          throw new Error(`Product not found: ${item.name}`);
+        }
+
+        const product = productSnap.data();
+
+        const currentStock = Number(product.stock || 0);
+        const buyingQuantity = Number(item.quantity || 0);
+
+        console.log("Product:", item.name);
+        console.log("Available stock:", currentStock);
+        console.log("Buying quantity:", buyingQuantity);
+
+        // =====================================
+        // STOCK = 0
+        // =====================================
+
+        if (currentStock <= 0) {
+          throw new Error(`${item.name} is out of stock`);
+        }
+
+        // =====================================
+        // BUYING MORE THAN AVAILABLE
+        // =====================================
+
+        if (buyingQuantity > currentStock) {
+          throw new Error(
+            `Only ${currentStock} item(s) available for ${item.name}`,
+          );
+        }
+
+        // Save information for later update
+        productsToUpdate.push({
+          productRef,
+          product,
+          buyingQuantity,
+        });
+      }
+
+      // =====================================
+      // 2. CREATE ORDER
+      // =====================================
+
+      const order = {
+        ...orderData,
+        createdAt: new Date(),
+      };
+
+      transaction.set(orderRef, order, {
+        merge: true,
+      });
+
+      // =====================================
+      // 3. DECREASE STOCK
+      // =====================================
+
+      for (const item of productsToUpdate) {
+        const currentStock = Number(item.product.stock || 0);
+
+        // THIS IS THE IMPORTANT PART
+        // Example:
+        // stock = 10
+        // buyingQuantity = 3
+        // newStock = 7
+
+        const newStock = currentStock - item.buyingQuantity;
+
+        transaction.update(item.productRef, {
+          stock: newStock,
+
+          status:
+            newStock === 0 ? "Out of Stock" : item.product.status || "Active",
+        });
+      }
+
+      return order;
+    });
+
+    console.log("✅ Order created successfully");
+
+    return result as Orders;
   } catch (error) {
-    console.error("❌ FIREBASE ORDER ERROR:", error);
+    console.error("❌ ORDER FAILED:", error);
+
     return null;
   }
 };
@@ -316,5 +404,3 @@ export const deleteAddress = async (userId: string) => {
   const addressRef = doc(db, "address", userId);
   await deleteDoc(addressRef);
 };
-
-

@@ -10,7 +10,7 @@ type Props = {
   selectedProducts: string[];
   setSelectedProducts: React.Dispatch<React.SetStateAction<string[]>>;
   onEdit: (product: Product) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, name:string) => void;
   onBulkDelete: () => void;
   onToggleStatus: (id: string) => void;
   onStockChange: (id: string, change: number) => void;
@@ -153,7 +153,7 @@ export default function ProductTable({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row">
+      <div className="flex flex-col gap-3 border-b border-slate-200  lg:flex-row">
         {/* Search */}
         <div className="relative flex-1">
           <Search
@@ -400,7 +400,7 @@ export default function ProductTable({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  onDelete(deleteProduct.id);
+                                  onDelete(deleteProduct.id, deleteProduct.name);
                                   setDeleteProduct(null);
                                 }}
                                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"

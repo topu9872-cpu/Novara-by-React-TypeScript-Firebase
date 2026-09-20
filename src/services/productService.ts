@@ -147,10 +147,6 @@ export const createOrder = async (
         const currentStock = Number(product.stock || 0);
         const buyingQuantity = Number(item.quantity || 0);
 
-        console.log("Product:", item.name);
-        console.log("Available stock:", currentStock);
-        console.log("Buying quantity:", buyingQuantity);
-
         // =====================================
         // STOCK = 0
         // =====================================
@@ -215,9 +211,6 @@ export const createOrder = async (
 
       return order;
     });
-
-    console.log("✅ Order created successfully");
-
     return result as Orders;
   } catch (error) {
     console.error("❌ ORDER FAILED:", error);
@@ -280,8 +273,6 @@ export const AddToCart = async (product: Product, quantity: number) => {
         quantity: quantity,
         addedAt: new Date(),
       });
-
-      console.log("Cart created successfully");
     }
 
     toast.success("Added to cart");

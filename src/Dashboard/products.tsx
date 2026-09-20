@@ -3,9 +3,8 @@ import ProductForm from "../DashboardComponents/ProductForm";
 import ProductTable from "../DashboardComponents/ProductTable";
 import type { Product } from "../types/Product";
 import { getAllProducts } from "../services/productService";
-import { updateProductStatus } from "../services/AdminDashboard";
+import { deleteProduct, updateProductStatus } from "../services/AdminDashboard";
 import { toast } from "sonner";
-
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
 
 export default function Products() {
@@ -50,30 +49,25 @@ export default function Products() {
 
     fetchProducts();
   }, []);
-const stats = useMemo(() => {
-  return {
-    total: products.length,
+  const stats = useMemo(() => {
+    return {
+      total: products.length,
 
-    active: products.filter(
-      (product) =>
-        product.stock > 0 && product.status === "Active",
-    ).length,
+      active: products.filter(
+        (product) => product.stock > 0 && product.status === "Active",
+      ).length,
 
-    inactive: products.filter(
-      (product) =>
-        product.stock > 0 && product.status === "Inactive",
-    ).length,
+      inactive: products.filter(
+        (product) => product.stock > 0 && product.status === "Inactive",
+      ).length,
 
-    lowStock: products.filter(
-      (product) =>
-        product.stock > 0 && product.stock <= 5,
-    ).length,
+      lowStock: products.filter(
+        (product) => product.stock > 0 && product.stock <= 5,
+      ).length,
 
-    outOfStock: products.filter(
-      (product) => product.stock === 0,
-    ).length,
-  };
-}, [products]);
+      outOfStock: products.filter((product) => product.stock === 0).length,
+    };
+  }, [products]);
 
   const handleAddProduct = (product: Product) => {
     setProducts((prev) => [product, ...prev]);
@@ -103,14 +97,16 @@ const stats = useMemo(() => {
     setIsFormOpen(false);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id));
-    setProductStatuses((prev) => {
-      const updated = { ...prev };
-      delete updated[id];
-      return updated;
-    });
-    setSelectedProducts((prev) => prev.filter((item) => item !== id));
+  const handleDeleteProduct = async (id: string, name: string) => {
+    try {
+      await deleteProduct(id);
+
+      setProducts((prev) => prev.filter((product) => product.id !== id));
+
+      toast.success(`${name} deleted successfully!`);
+    } catch {
+      toast.error(`Failed to delete ${name}!`);
+    }
   };
 
   const handleBulkDelete = () => {
@@ -131,35 +127,35 @@ const stats = useMemo(() => {
     setSelectedProducts([]);
   };
 
-const handleToggleStatus = async (id: string) => {
-  const product = products.find((product) => product.id === id);
+  const handleToggleStatus = async (id: string) => {
+    const product = products.find((product) => product.id === id);
 
-  if (!product || product.stock === 0) return;
+    if (!product || product.stock === 0) return;
 
-  const currentStatus = product.status || "Active";
+    const currentStatus = product.status || "Active";
 
-  const newStatus: ProductStatus =
-    currentStatus === "Active" ? "Inactive" : "Active";
+    const newStatus: ProductStatus =
+      currentStatus === "Active" ? "Inactive" : "Active";
 
-  try {
-    await updateProductStatus(id, newStatus);
+    try {
+      await updateProductStatus(id, newStatus);
 
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === id
-          ? {
-              ...product,
-              status: newStatus,
-            }
-          : product,
-      ),
-    );
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.id === id
+            ? {
+                ...product,
+                status: newStatus,
+              }
+            : product,
+        ),
+      );
       toast.success(`Product status changed to ${newStatus}`);
-  } catch (error) {
-    console.error("Failed to update product status:", error);
-     toast.error("Failed to update product status");
-  }
-};
+    } catch (error) {
+      console.error("Failed to update product status:", error);
+      toast.error("Failed to update product status");
+    }
+  };
 
   const handleStockChange = (id: string, change: number) => {
     setProducts((prev) =>

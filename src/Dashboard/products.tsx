@@ -3,7 +3,11 @@ import ProductForm from "../DashboardComponents/ProductForm";
 import ProductTable from "../DashboardComponents/ProductTable";
 import type { Product } from "../types/Product";
 import { getAllProducts } from "../services/productService";
-import { deleteProduct, updateProductStatus } from "../services/AdminDashboard";
+import {
+  deleteProduct,
+  restoreProduct,
+  updateProductStatus,
+} from "../services/AdminDashboard";
 import { toast } from "sonner";
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
 
@@ -105,17 +109,24 @@ export default function Products() {
     try {
       await deleteProduct(id);
 
-      // Remove from UI
       setProducts((prev) => prev.filter((product) => product.id !== id));
 
       toast.success(`${name} deleted successfully!`, {
         duration: 5000,
         action: {
           label: "Undo",
-          onClick: () => {
-            setProducts((prev) => [deletedProduct, ...prev]);
+          onClick: async () => {
+            try {
+              // Restore in Firebase
+              await restoreProduct(deletedProduct);
 
-            toast.success(`${name} restored!`);
+              // Restore in UI
+              setProducts((prev) => [deletedProduct, ...prev]);
+
+              toast.success(`${name} restored!`);
+            } catch {
+              toast.error(`Failed to restore ${name}!`);
+            }
           },
         },
       });
@@ -143,8 +154,18 @@ export default function Products() {
       toast.success(`${deletedProducts.length} products deleted!`, {
         action: {
           label: "Undo",
-          onClick: () => {
-            setProducts((prev) => [...deletedProducts, ...prev]);
+          onClick: async () => {
+            try {
+              await Promise.all(
+                deletedProducts.map((product) => restoreProduct(product)),
+              );
+
+              setProducts((prev) => [...deletedProducts, ...prev]);
+
+              toast.success(`${deletedProducts.length} products restored!`);
+            } catch {
+              toast.error("Failed to restore products!");
+            }
           },
         },
       });

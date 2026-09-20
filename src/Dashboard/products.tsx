@@ -98,33 +98,59 @@ export default function Products() {
   };
 
   const handleDeleteProduct = async (id: string, name: string) => {
+    const deletedProduct = products.find((product) => product.id === id);
+
+    if (!deletedProduct) return;
+
     try {
       await deleteProduct(id);
 
+      // Remove from UI
       setProducts((prev) => prev.filter((product) => product.id !== id));
 
-      toast.success(`${name} deleted successfully!`);
+      toast.success(`${name} deleted successfully!`, {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            setProducts((prev) => [deletedProduct, ...prev]);
+
+            toast.success(`${name} restored!`);
+          },
+        },
+      });
     } catch {
       toast.error(`Failed to delete ${name}!`);
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (!selectedProducts.length) return;
 
-    setProducts((prev) =>
-      prev.filter((product) => !selectedProducts.includes(product.id)),
+    const deletedProducts = products.filter((product) =>
+      selectedProducts.includes(product.id),
     );
 
-    setProductStatuses((prev) => {
-      const updated = { ...prev };
-      selectedProducts.forEach((id) => {
-        delete updated[id];
-      });
-      return updated;
-    });
+    try {
+      await Promise.all(selectedProducts.map((id) => deleteProduct(id)));
 
-    setSelectedProducts([]);
+      setProducts((prev) =>
+        prev.filter((product) => !selectedProducts.includes(product.id)),
+      );
+
+      setSelectedProducts([]);
+
+      toast.success(`${deletedProducts.length} products deleted!`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            setProducts((prev) => [...deletedProducts, ...prev]);
+          },
+        },
+      });
+    } catch {
+      toast.error("Failed to delete products!");
+    }
   };
 
   const handleToggleStatus = async (id: string) => {

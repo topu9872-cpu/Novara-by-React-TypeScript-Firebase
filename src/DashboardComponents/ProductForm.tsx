@@ -8,6 +8,7 @@ type Props = {
   onClose: () => void;
   onAdd: (product: Product) => void;
   onEdit: (product: Product) => void;
+  loading: boolean;
 };
 
 const categories = [
@@ -25,6 +26,7 @@ export default function ProductForm({
   onClose,
   onAdd,
   onEdit,
+  loading,
 }: Props) {
   const isEditing = Boolean(product);
 
@@ -389,20 +391,31 @@ export default function ProductForm({
 
           {/* Footer */}
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </button>
+           <button
+  type="button"
+  onClick={onClose}
+  disabled={loading}
+  className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  Cancel
+</button>
 
-            <button
-              type="submit"
-              className="rounded-lg bg-green-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              {isEditing ? "Save Changes" : "Add Product"}
-            </button>
+           <button
+  type="submit"
+  disabled={loading}
+  className="rounded-lg bg-green-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {loading ? (
+    <span className="flex items-center gap-2">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      {isEditing ? "Saving..." : "Adding..."}
+    </span>
+  ) : isEditing ? (
+    "Save Changes"
+  ) : (
+    "Add Product"
+  )}
+</button>
           </div>
         </form>
       </div>

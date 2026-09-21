@@ -26,7 +26,7 @@ export default function Products() {
   const [productStatuses, setProductStatuses] = useState<
     Record<string, ProductStatus>
   >({});
-
+  const [loading, setLoading] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -99,6 +99,8 @@ export default function Products() {
 
   const handleAddProduct = async (product: Product) => {
     try {
+      setLoading(true);
+
       const createdProduct = await createProduct(product);
 
       if (!createdProduct) {
@@ -118,10 +120,13 @@ export default function Products() {
 
       toast.success("Product added successfully!");
     } catch (error) {
-      console.error(error);
+      console.error("Failed to add product:", error);
       toast.error("Failed to add product!");
+    } finally {
+      setLoading(false);
     }
   };
+
   const handleEditProduct = (product: Product) => {
     const nextStatus: ProductStatus =
       product.stock === 0
@@ -175,7 +180,6 @@ export default function Products() {
             try {
               const restoredProduct: Product = {
                 ...deletedProduct,
-                
               };
 
               await restoreProduct(restoredProduct);
@@ -396,11 +400,14 @@ export default function Products() {
         <ProductForm
           product={editingProduct}
           onClose={() => {
+            if (loading) return;
+
             setIsFormOpen(false);
             setEditingProduct(null);
           }}
           onAdd={handleAddProduct}
           onEdit={handleEditProduct}
+          loading={loading}
         />
       )}
     </div>

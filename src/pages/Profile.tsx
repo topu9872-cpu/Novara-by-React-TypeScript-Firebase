@@ -25,7 +25,7 @@ interface UserProfile {
   email: string;
   phone: string;
   location: string;
-  photoURL: string;
+  image: string;
 }
 
 const Profile: React.FC = () => {
@@ -60,7 +60,7 @@ const Profile: React.FC = () => {
           email: data.email || user.email || "",
           phone: data.phone || "Not Provided",
           location: data.location || "Not Provided",
-          photoURL: data.photoURL || user.photoURL || "",
+          image: data.photoURL || user.photoURL || "",
         });
       } else {
 
@@ -70,7 +70,7 @@ const Profile: React.FC = () => {
           email: user.email || "",
           phone: "Not Provided",
           location: "Not Provided",
-          photoURL: user.photoURL || "",
+          image: user.photoURL || "",
         });
       }
     } catch (error) {
@@ -84,7 +84,7 @@ const Profile: React.FC = () => {
         email: user.email || "",
         phone: "Not Provided",
         location: "Not Provided",
-        photoURL: user.photoURL || "",
+        image: user.photoURL || "",
       });
     } finally {
       setLoadingProfile(false);
@@ -233,9 +233,9 @@ const Profile: React.FC = () => {
               {/* AVATAR */}
 
               <div className="w-24 h-24 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-3xl border-4 border-white shadow-md overflow-hidden shrink-0">
-                {profile.photoURL ? (
+                {profile.image ? (
                   <img
-                    src={profile.photoURL}
+                    src={profile.image}
                     alt={profile.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {

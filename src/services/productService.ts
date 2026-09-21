@@ -41,9 +41,10 @@ export const getProducts = async () => {
     const snapshot = await getDocs(collection(db, "Products"));
 
     const products = snapshot.docs.map((doc) => ({
-      id: doc.id,
       ...doc.data(),
+      id: doc.id,
     }));
+
     return products;
   } catch (error) {
     console.error("Firestore Error:", error);
@@ -82,8 +83,8 @@ export const getAllProducts = async ({
     const snapshot = await getDocs(q);
 
     const products = snapshot.docs.map((doc) => ({
-      id: doc.id,
       ...doc.data(),
+      id: doc.id,
     }));
 
     return {
@@ -92,7 +93,10 @@ export const getAllProducts = async ({
     };
   } catch (error) {
     console.error("Firestore Error:", error);
-    return { products: [], lastDoc: null };
+    return {
+      products: [],
+      lastDoc: null,
+    };
   }
 };
 
@@ -102,8 +106,12 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Product;
+      return {
+        ...docSnap.data(),
+        id: docSnap.id,
+      } as Product;
     }
+
     return null;
   } catch (error) {
     console.error("Error fetching product by ID:", error);
@@ -132,7 +140,6 @@ export const createOrder = async (
       const productsToUpdate = [];
 
       for (const item of orderData.products) {
-        // IMPORTANT:
         // item.id = Product document ID
         const productRef = doc(db, "Products", item.id);
 
@@ -192,13 +199,6 @@ export const createOrder = async (
 
       for (const item of productsToUpdate) {
         const currentStock = Number(item.product.stock || 0);
-
-        // THIS IS THE IMPORTANT PART
-        // Example:
-        // stock = 10
-        // buyingQuantity = 3
-        // newStock = 7
-
         const newStock = currentStock - item.buyingQuantity;
 
         transaction.update(item.productRef, {
@@ -211,6 +211,7 @@ export const createOrder = async (
 
       return order;
     });
+
     return result as Orders;
   } catch (error) {
     console.error("❌ ORDER FAILED:", error);
@@ -222,6 +223,7 @@ export const createOrder = async (
 export const getUserOrders = async (): Promise<Orders[]> => {
   try {
     const user = await getCurrentUser();
+
     if (!user) {
       toast.error("Please login first");
       return [];
@@ -248,6 +250,7 @@ export const getUserOrders = async (): Promise<Orders[]> => {
 export const AddToCart = async (product: Product, quantity: number) => {
   try {
     const user = await getCurrentUser();
+
     if (!user) {
       toast.error("Please login first");
       return;
@@ -288,6 +291,7 @@ export const updateCartItemQuantity = async (
 ) => {
   try {
     const user = await getCurrentUser();
+
     if (!user) return;
 
     const cartRef = doc(db, "users", user.uid, "cart", productId);
@@ -297,7 +301,9 @@ export const updateCartItemQuantity = async (
       return;
     }
 
-    await updateDoc(cartRef, { quantity });
+    await updateDoc(cartRef, {
+      quantity,
+    });
   } catch (error) {
     console.error("Update cart quantity error:", error);
     toast.error("Failed to update cart quantity");
@@ -307,9 +313,11 @@ export const updateCartItemQuantity = async (
 export const removeCartItem = async (productId: string) => {
   try {
     const user = await getCurrentUser();
+
     if (!user) return;
 
     const cartRef = doc(db, "users", user.uid, "cart", productId);
+
     await deleteDoc(cartRef);
   } catch (error) {
     console.error("Remove cart item error:", error);
@@ -320,11 +328,13 @@ export const removeCartItem = async (productId: string) => {
 export const getCartItems = async (): Promise<CartItem[]> => {
   try {
     const user = await getCurrentUser();
+
     if (!user) {
       return [];
     }
 
     const cartRef = collection(db, "users", user.uid, "cart");
+
     const snapshot = await getDocs(cartRef);
 
     const cartItems: CartItem[] = snapshot.docs
@@ -360,14 +370,16 @@ export const getCartItems = async (): Promise<CartItem[]> => {
 
 export const saveAddress = async (addressData: Address) => {
   const user = await getCurrentUser();
+
   if (!user) return;
+
   const userRef = doc(db, "address", user.uid);
+
   await setDoc(
     userRef,
     {
       address: {
         ...addressData,
-
         isDefault: true,
       },
     },
@@ -393,5 +405,6 @@ export const getAddress = async (userId: string) => {
 
 export const deleteAddress = async (userId: string) => {
   const addressRef = doc(db, "address", userId);
+
   await deleteDoc(addressRef);
 };

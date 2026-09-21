@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 
 import { toast } from "sonner";
+import CloudinaryImage from "../CloudinaryImage";
 
 interface UserProfile {
   name: string;
   email: string;
   phone: string;
   location: string;
-  photoURL: string;
+  image: string;
 }
 
 interface Props {
@@ -63,7 +64,7 @@ export const ProfileEditForm: React.FC<Props> = ({
 
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const [preview, setPreview] = useState(profile.photoURL || "");
+  const [preview, setPreview] = useState(profile.image || "");
 
   const [saving, setSaving] = useState(false);
 
@@ -81,7 +82,7 @@ export const ProfileEditForm: React.FC<Props> = ({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast.error("Image must be smaller than 5MB");
       return;
     }
@@ -97,84 +98,51 @@ export const ProfileEditForm: React.FC<Props> = ({
   // SUBMIT
   // ==========================================
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!name.trim()) {
-      toast.error("Full name is required");
-      return;
+  if (!name.trim()) {
+    toast.error("Full name is required");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    let image = profile.image || currentUser.photoURL || "";
+
+    if (imageFile) {
+      image = (await CloudinaryImage(imageFile)) || "";
     }
 
-    try {
-      setSaving(true);
+    await updateProfile(currentUser, {
+      displayName: name.trim(),
+      photoURL: image,
+    });
 
-      // ========================================
-      // CURRENT PHOTO
-      // ========================================
+    await setDoc(
+      doc(db, "users", currentUser.uid),
+      {
+        uid: currentUser.uid,
+        name: name.trim(),
+        email: currentUser.email || "",
+        phone: phone.trim(),
+        location: location.trim(),
+        photoURL: image,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
 
-      let photoURL = profile.photoURL || currentUser.photoURL || "";
-
-      // ========================================
-      // CLOUDINARY IMAGE UPLOAD
-      // ========================================
-
-      if (imageFile) {
-        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-        const formData = new FormData();
-
-        formData.append("file", imageFile);
-        formData.append("upload_preset", uploadPreset);
-
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data?.error?.message || "Cloudinary upload failed");
-        }
-
-        photoURL = data.secure_url;
-      }
-      // ========================================
-      // FIREBASE AUTH PROFILE
-      // ========================================
-
-      await updateProfile(currentUser, {
-        displayName: name.trim(),
-        photoURL: photoURL || null,
-      });
-
-      await setDoc(
-        doc(db, "users", currentUser.uid),
-        {
-          uid: currentUser.uid,
-          name: name.trim(),
-          email: currentUser.email || "",
-          phone: phone.trim(),
-          location: location.trim(),
-          photoURL,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-
-      toast.success("Profile updated successfully!");
-
-      onSuccess();
-    } catch (error: any) {
-      setSaving(false);
-  
-     
-    }
-  };
+    toast.success("Profile updated successfully!");
+    onSuccess();
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to update profile");
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

@@ -4,12 +4,19 @@ import ProductTable from "../DashboardComponents/ProductTable";
 import type { Product } from "../types/Product";
 import { getAllProducts } from "../services/productService";
 import {
+  createProduct,
   deleteProduct,
   restoreProduct,
   updateProductStatus,
 } from "../services/AdminDashboard";
 import { toast } from "sonner";
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
+
+const normalizeProductStatus = (value?: string | null): ProductStatus => {
+  if (value === "Inactive") return "Inactive";
+  if (value === "Out of Stock") return "Out of Stock";
+  return "Active";
+};
 
 export default function Products() {
   // 1. Initialize as an empty array to prevent undefined map/filter errors
@@ -26,11 +33,18 @@ export default function Products() {
 
   // 2. Fetch products and initialize statuses once data arrives
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
 
         const data = await getAllProducts();
+
+        // If another request has already finished or component
+        // is no longer active, ignore this result.
+        if (cancelled) return;
+
         const fetchedProducts = data.products || [];
 
         setProducts(fetchedProducts);
@@ -39,19 +53,29 @@ export default function Products() {
           Object.fromEntries(
             fetchedProducts.map((product) => [
               product.id,
-              product.stock === 0 ? "Out of Stock" : "Active",
+              product.stock === 0
+                ? "Out of Stock"
+                : normalizeProductStatus(product.status),
             ]),
           );
 
         setProductStatuses(initialStatuses);
       } catch (error) {
-        console.error("Failed to fetch products:", error);
+        if (!cancelled) {
+          console.error("Failed to fetch products:", error);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchProducts();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const stats = useMemo(() => {
     return {
@@ -73,28 +97,48 @@ export default function Products() {
     };
   }, [products]);
 
-  const handleAddProduct = (product: Product) => {
-    setProducts((prev) => [product, ...prev]);
-    setProductStatuses((prev) => ({
-      ...prev,
-      [product.id]: product.stock === 0 ? "Out of Stock" : "Active",
-    }));
-    setIsFormOpen(false);
-  };
+  const handleAddProduct = async (product: Product) => {
+    try {
+      const createdProduct = await createProduct(product);
 
+      if (!createdProduct) {
+        toast.error("Failed to add product!");
+        return;
+      }
+
+      setProducts((prev) => [createdProduct, ...prev]);
+
+      setProductStatuses((prev) => ({
+        ...prev,
+        [createdProduct.id]:
+          createdProduct.stock === 0 ? "Out of Stock" : "Active",
+      }));
+
+      setIsFormOpen(false);
+
+      toast.success("Product added successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add product!");
+    }
+  };
   const handleEditProduct = (product: Product) => {
+    const nextStatus: ProductStatus =
+      product.stock === 0
+        ? "Out of Stock"
+        : normalizeProductStatus(product.status ?? productStatuses[product.id]);
+
     setProducts((prev) =>
-      prev.map((item) => (item.id === product.id ? product : item)),
+      prev.map((item) =>
+        item.id === product.id
+          ? { ...item, ...product, status: nextStatus }
+          : item,
+      ),
     );
 
     setProductStatuses((prev) => ({
       ...prev,
-      [product.id]:
-        product.stock === 0
-          ? "Out of Stock"
-          : prev[product.id] === "Inactive"
-            ? "Inactive"
-            : "Active",
+      [product.id]: nextStatus,
     }));
 
     setEditingProduct(null);
@@ -106,10 +150,22 @@ export default function Products() {
 
     if (!deletedProduct) return;
 
-    try {
-      await deleteProduct(id);
+    const previousStatus: ProductStatus = normalizeProductStatus(
+      productStatuses[id] ?? deletedProduct.status,
+    );
 
+    try {
       setProducts((prev) => prev.filter((product) => product.id !== id));
+      setSelectedProducts((prev) =>
+        prev.filter((productId) => productId !== id),
+      );
+      setProductStatuses((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      await deleteProduct(id);
 
       toast.success(`${name} deleted successfully!`, {
         duration: 5000,
@@ -117,24 +173,48 @@ export default function Products() {
           label: "Undo",
           onClick: async () => {
             try {
-              // Restore in Firebase
-              await restoreProduct(deletedProduct);
+              const restoredProduct: Product = {
+                ...deletedProduct,
+                
+              };
 
-              // Restore in UI
-              setProducts((prev) => [deletedProduct, ...prev]);
+              await restoreProduct(restoredProduct);
+
+              setProducts((prev) => {
+                if (prev.some((product) => product.id === restoredProduct.id)) {
+                  return prev;
+                }
+
+                return [restoredProduct, ...prev];
+              });
+
+              setProductStatuses((prev) => ({
+                ...prev,
+                [restoredProduct.id]: previousStatus,
+              }));
 
               toast.success(`${name} restored!`);
-            } catch {
+            } catch (error) {
+              console.error(error);
               toast.error(`Failed to restore ${name}!`);
             }
           },
         },
       });
-    } catch {
+    } catch (error) {
+      console.error(error);
+      setProducts((prev) =>
+        prev.some((product) => product.id === deletedProduct.id)
+          ? prev
+          : [deletedProduct, ...prev],
+      );
+      setProductStatuses((prev) => ({
+        ...prev,
+        [deletedProduct.id]: previousStatus,
+      }));
       toast.error(`Failed to delete ${name}!`);
     }
   };
-
   const handleBulkDelete = async () => {
     if (!selectedProducts.length) return;
 
@@ -142,9 +222,15 @@ export default function Products() {
       selectedProducts.includes(product.id),
     );
 
-    try {
-      await Promise.all(selectedProducts.map((id) => deleteProduct(id)));
+    if (!deletedProducts.length) return;
 
+    try {
+      // Delete from Firebase
+      await Promise.all(
+        deletedProducts.map((product) => deleteProduct(product.id)),
+      );
+
+      // Remove from UI
       setProducts((prev) =>
         prev.filter((product) => !selectedProducts.includes(product.id)),
       );
@@ -152,24 +238,38 @@ export default function Products() {
       setSelectedProducts([]);
 
       toast.success(`${deletedProducts.length} products deleted!`, {
+        duration: 5000,
         action: {
           label: "Undo",
+
           onClick: async () => {
             try {
+              // Restore in Firebase
               await Promise.all(
                 deletedProducts.map((product) => restoreProduct(product)),
               );
 
-              setProducts((prev) => [...deletedProducts, ...prev]);
+              // Restore in UI
+              setProducts((prev) => {
+                const existingIds = new Set(prev.map((product) => product.id));
+
+                const restoredProducts = deletedProducts.filter(
+                  (product) => !existingIds.has(product.id),
+                );
+
+                return [...restoredProducts, ...prev];
+              });
 
               toast.success(`${deletedProducts.length} products restored!`);
-            } catch {
+            } catch (error) {
+              console.error(error);
               toast.error("Failed to restore products!");
             }
           },
         },
       });
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error("Failed to delete products!");
     }
   };
@@ -179,7 +279,7 @@ export default function Products() {
 
     if (!product || product.stock === 0) return;
 
-    const currentStatus = product.status || "Active";
+    const currentStatus = normalizeProductStatus(product.status);
 
     const newStatus: ProductStatus =
       currentStatus === "Active" ? "Inactive" : "Active";

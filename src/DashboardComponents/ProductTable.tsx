@@ -10,7 +10,7 @@ type Props = {
   selectedProducts: string[];
   setSelectedProducts: React.Dispatch<React.SetStateAction<string[]>>;
   onEdit: (product: Product) => void;
-  onDelete: (id: string, name:string) => void;
+  onDelete: (id: string, name: string) => void;
   onBulkDelete: () => void;
   onToggleStatus: (id: string) => void;
   onStockChange: (id: string, change: number) => void;
@@ -39,20 +39,35 @@ export default function ProductTable({
   const [sort, setSort] = useState<SortOption>("name");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+
+  // No soft delete. Products are directly taken from props.
+  const visibleProducts = products;
+
+  const selectedProductIds = useMemo(
+    () =>
+      selectedProducts.filter((id) =>
+        visibleProducts.some((product) => product.id === id),
+      ),
+    [selectedProducts, visibleProducts],
+  );
 
   const categories = useMemo(() => {
     return [
       "All Categories",
-      ...Array.from(new Set(products.map((product) => product.category))),
+      ...Array.from(
+        new Set(visibleProducts.map((product) => product.category)),
+      ),
     ];
-  }, [products]);
+  }, [visibleProducts]);
 
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...visibleProducts];
 
     if (search.trim()) {
       const query = search.toLowerCase();
+
       result = result.filter(
         (product) =>
           product.name.toLowerCase().includes(query) ||
@@ -67,7 +82,10 @@ export default function ProductTable({
     if (status !== "All Status") {
       result = result.filter((product) => {
         const currentStatus =
-          product.stock === 0 ? "Out of Stock" : productStatuses[product.id];
+          product.stock === 0
+            ? "Out of Stock"
+            : productStatuses[product.id] || product.status || "Active";
+
         return currentStatus === status;
       });
     }
@@ -76,12 +94,16 @@ export default function ProductTable({
       switch (sort) {
         case "price-low":
           return Number(a.price) - Number(b.price);
+
         case "price-high":
           return Number(b.price) - Number(a.price);
+
         case "stock-low":
           return a.stock - b.stock;
+
         case "stock-high":
           return b.stock - a.stock;
+
         case "name":
         default:
           return a.name.localeCompare(b.name);
@@ -89,9 +111,10 @@ export default function ProductTable({
     });
 
     return result;
-  }, [products, productStatuses, search, category, status, sort]);
+  }, [visibleProducts, productStatuses, search, category, status, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+
   const currentPage = Math.min(page, totalPages);
 
   const paginatedProducts = filteredProducts.slice(
@@ -101,7 +124,9 @@ export default function ProductTable({
 
   const allCurrentSelected =
     paginatedProducts.length > 0 &&
-    paginatedProducts.every((product) => selectedProducts.includes(product.id));
+    paginatedProducts.every((product) =>
+      selectedProductIds.includes(product.id),
+    );
 
   const toggleSelect = (id: string) => {
     setSelectedProducts((prev) =>
@@ -136,30 +161,33 @@ export default function ProductTable({
     setPage(1);
   };
 
-  // Ellipsis Pagination generator function
   const getPaginationPages = (current: number, total: number) => {
     if (total <= 7) {
       return Array.from({ length: total }, (_, i) => i + 1);
     }
+
     if (current <= 4) {
       return [1, 2, 3, 4, 5, "...", total];
     }
+
     if (current >= total - 3) {
       return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
     }
+
     return [1, "...", current - 1, current, current + 1, "...", total];
   };
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 border-b border-slate-200  lg:flex-row">
+      <div className="flex flex-col gap-3 border-b border-slate-200 lg:flex-row">
         {/* Search */}
         <div className="relative flex-1">
           <Search
             size={18}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
+
           <input
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
@@ -206,10 +234,10 @@ export default function ProductTable({
       </div>
 
       {/* Selection toolbar */}
-      {selectedProducts.length > 0 && (
+      {selectedProductIds.length > 0 && (
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-3">
           <p className="text-sm font-medium text-slate-700">
-            {selectedProducts.length} selected
+            {selectedProductIds.length} selected
           </p>
 
           <button
@@ -235,21 +263,27 @@ export default function ProductTable({
                   className="h-4 w-4"
                 />
               </th>
+
               <th className="px-5 py-3 text-xs font-semibold uppercase text-slate-500">
                 Product
               </th>
+
               <th className="px-5 py-3 text-xs font-semibold uppercase text-slate-500">
                 Category
               </th>
+
               <th className="px-5 py-3 text-xs font-semibold uppercase text-slate-500">
                 Price
               </th>
+
               <th className="px-5 py-3 text-xs font-semibold uppercase text-slate-500">
                 Stock
               </th>
+
               <th className="px-5 py-3 text-xs font-semibold uppercase text-slate-500">
                 Status
               </th>
+
               <th className="px-5 py-3 text-right text-xs font-semibold uppercase text-slate-500">
                 Actions
               </th>
@@ -264,9 +298,11 @@ export default function ProductTable({
                     <div className="mb-3 rounded-full bg-slate-100 p-4">
                       <Search size={24} className="text-slate-400" />
                     </div>
+
                     <p className="font-medium text-slate-700">
                       No products found
                     </p>
+
                     <p className="mt-1 text-sm text-slate-400">
                       Try changing your search or filters.
                     </p>
@@ -278,21 +314,24 @@ export default function ProductTable({
                 const currentStatus =
                   product.stock === 0
                     ? "Out of Stock"
-                    : product.status || "Active";
+                    : productStatuses[product.id] || product.status || "Active";
+
                 return (
                   <tr
                     key={product.id}
                     className="border-b border-slate-100 transition hover:bg-slate-50"
                   >
+                    {/* Checkbox */}
                     <td className="px-5 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedProducts.includes(product.id)}
+                        checked={selectedProductIds.includes(product.id)}
                         onChange={() => toggleSelect(product.id)}
                         className="h-4 w-4"
                       />
                     </td>
 
+                    {/* Product */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -300,6 +339,7 @@ export default function ProductTable({
                           alt={product.name}
                           className="h-12 w-12 rounded-lg object-cover"
                         />
+
                         <div>
                           <p className="font-medium text-slate-900">
                             {product.name}
@@ -308,20 +348,24 @@ export default function ProductTable({
                       </div>
                     </td>
 
+                    {/* Category */}
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {product.category}
                     </td>
 
+                    {/* Price */}
                     <td className="px-5 py-4 text-sm font-medium text-slate-900">
                       ${Number(product.price).toFixed(2)}
                     </td>
 
+                    {/* Stock */}
                     <td className="px-5 py-4">
                       <span className="min-w-6 text-center text-sm">
                         {product.stock}
                       </span>
                     </td>
 
+                    {/* Status */}
                     <td className="px-5 py-4">
                       <button
                         type="button"
@@ -349,6 +393,7 @@ export default function ProductTable({
                       </button>
                     </td>
 
+                    {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -367,50 +412,6 @@ export default function ProductTable({
                           <Trash2 size={15} />
                         </button>
                       </div>
-
-                      {deleteProduct && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
-                          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-                            <div className="mb-5 flex items-start gap-4">
-                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50">
-                                <Trash2 size={20} className="text-red-600" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
-                                  Delete product?
-                                </h3>
-                                <p className="mt-1 text-sm leading-5 text-slate-500">
-                                  Are you sure you want to delete{" "}
-                                  <span className="font-medium text-slate-700">
-                                    {deleteProduct.name}
-                                  </span>
-                                  ? This action cannot be undone.
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex justify-end gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setDeleteProduct(null)}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onDelete(deleteProduct.id, deleteProduct.name);
-                                  setDeleteProduct(null);
-                                }}
-                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
-                              >
-                                Delete product
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 );
@@ -420,7 +421,56 @@ export default function ProductTable({
         </table>
       </div>
 
-      {/* Footer / Ellipsis Pagination */}
+      {/* Delete Confirmation Modal */}
+      {deleteProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Delete product?
+                </h3>
+
+                <p className="mt-1 text-sm leading-5 text-slate-500">
+                  Are you sure you want to delete{" "}
+                  <span className="font-medium text-slate-700">
+                    {deleteProduct.name}
+                  </span>
+                  ? You can restore it using the Undo option.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteProduct(null)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(deleteProduct.id, deleteProduct.name);
+
+                  setDeleteProduct(null);
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                Delete product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer / Pagination */}
       <div className="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between gap-3 sm:justify-start">
           <p className="text-sm text-slate-500">
@@ -454,7 +504,7 @@ export default function ProductTable({
           </select>
         </div>
 
-        {/* Ellipsis Pagination Controls */}
+        {/* Pagination */}
         <div className="flex items-center justify-center gap-1">
           <button
             disabled={currentPage === 1}
@@ -479,6 +529,7 @@ export default function ProductTable({
                 }
 
                 const num = pageNumber as number;
+
                 return (
                   <button
                     key={num}

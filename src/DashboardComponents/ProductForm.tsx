@@ -1,6 +1,7 @@
 import { ImagePlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Product } from "../types/Product";
+import CloudinaryImage from "../Components/CloudinaryImage";
 
 type Props = {
   product: Product | null;
@@ -39,6 +40,7 @@ export default function ProductForm({
     stock: product?.stock?.toString() ?? "",
   });
 
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -56,9 +58,38 @@ export default function ProductForm({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith("image/")) {
+      setError("Please select a valid image.");
+      return;
+    }
+
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError("Image must be smaller than 5MB.");
+      return;
+    }
+
+    setError("");
+    setFile(selectedFile);
+
+    // Preview selected image
+    const previewUrl = URL.createObjectURL(selectedFile);
+
+    setForm((prev) => ({
+      ...prev,
+      image: previewUrl,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
+
+    setError("");
+
     if (!form.name.trim()) {
       setError("Product name is required.");
       return;
@@ -89,49 +120,52 @@ export default function ProductForm({
       return;
     }
 
-    const productData: Product = {
-      id: product?.id ?? `${Date.now()}-${Math.random()}`,
+    try {
+      let image = form.image;
 
-      category: form.category,
+      // Upload only when a new image is selected
+      if (file) {
+        const uploadedImage = await CloudinaryImage(file);
 
-      color: form.color.trim(),
+        if (!uploadedImage) {
+          setError("Image upload failed.");
+          return;
+        }
 
-      description: form.description.trim(),
+        image = uploadedImage;
+      }
 
-      image:
-        form.image.trim() ||
-        "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
+      const productData: Product = {
+        id: product?.id ?? `${Date.now()}-${Math.random()}`,
 
-      material: form.material.trim(),
+        category: form.category,
 
-      name: form.name.trim(),
+        color: form.color.trim(),
 
-      price: form.price,
+        description: form.description.trim(),
 
-      rating: form.rating,
+        image,
 
-      stock: Number(form.stock),
-    };
+        material: form.material.trim(),
 
-    if (isEditing) {
-      onEdit(productData);
-    } else {
-      onAdd(productData);
+        name: form.name.trim(),
+
+        price: form.price,
+
+        rating: form.rating,
+
+        stock: Number(form.stock),
+      };
+
+      if (isEditing) {
+        onEdit(productData);
+      } else {
+        onAdd(productData);
+      }
+    } catch (error) {
+      console.error(error);
+      setError("Failed to upload image. Please try again.");
     }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      updateField("image", reader.result as string);
-    };
-
-    reader.readAsDataURL(file);
   };
 
   return (
@@ -194,7 +228,7 @@ export default function ProductForm({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleImageChange}
                   className="hidden"
                 />
               </label>

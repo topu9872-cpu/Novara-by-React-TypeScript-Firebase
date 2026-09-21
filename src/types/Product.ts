@@ -18,6 +18,8 @@ export interface Product {
 
   stock: number;
   status?: ProductStatus;
+  isDeleted?: boolean;
+  deletedAt?: Date | string | null;
 }
 
-export type ProductStatus = "Active" | "Inactive" | "Out of Stock";
+export type ProductStatus = string;

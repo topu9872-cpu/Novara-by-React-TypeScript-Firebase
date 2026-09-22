@@ -155,7 +155,7 @@ const DashboardSidebar = () => {
             </p>
 
             <NavLink
-              to="/"
+              to="/shop"
               onClick={() => setOpen(false)}
               className="flex items-center hover:scale-102 hover:bg-green-100 gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-500 transition  hover:text-neutral-950"
             >

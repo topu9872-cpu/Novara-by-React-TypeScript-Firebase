@@ -266,37 +266,36 @@ export default function Products() {
       toast.error("Failed to delete products!");
     }
   };
-
   const handleToggleStatus = async (id: string) => {
-    const product = products.find((product) => product.id === id);
-
+    const product = products.find((p) => p.id === id);
     if (!product || product.stock === 0) return;
 
-    const currentStatus = normalizeProductStatus(product.status);
-
+    const currentStatus =
+      productStatuses[id] || normalizeProductStatus(product.status);
     const newStatus: ProductStatus =
       currentStatus === "Active" ? "Inactive" : "Active";
 
     try {
+      // 1. Update the database
       await updateProductStatus(id, newStatus);
 
+      // 2. Update the products array state
       setProducts((prev) =>
-        prev.map((product) =>
-          product.id === id
-            ? {
-                ...product,
-                status: newStatus,
-              }
-            : product,
-        ),
+        prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p)),
       );
+
+      // 3. Update the status dictionary state (This makes the UI change instantly!)
+      setProductStatuses((prev) => ({
+        ...prev,
+        [id]: newStatus,
+      }));
+
       toast.success(`Product status changed to ${newStatus}`);
     } catch (error) {
       console.error("Failed to update product status:", error);
       toast.error("Failed to update product status");
     }
   };
-
   const handleStockChange = (id: string, change: number) => {
     setProducts((prev) =>
       prev.map((product) => {

@@ -1,6 +1,12 @@
-import { X, Package, User, CreditCard, CalendarDays } from "lucide-react";
-import type { Order } from "../types/CustomarOrders";
 
+import {
+  X,
+  Package,
+  User,
+  CreditCard,
+  CalendarDays,
+} from "lucide-react";
+import type { Order } from "../types/CustomarOrders";
 
 type OrderDetailsModalProps = {
   order: Order;
@@ -28,9 +34,11 @@ const OrderDetailsModal = ({
   };
 
   const totalQuantity = order.products.reduce(
-    (total, product) => total + product.quantity,
+    (total, product) => total + Number(product.quantity),
     0,
   );
+
+  const userId = order.products[0].userId!;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm">
@@ -42,7 +50,9 @@ const OrderDetailsModal = ({
               Order Details
             </h2>
 
-            <p className="mt-1 font-mono text-xs text-slate-400">#{order.id}</p>
+            <p className="mt-1 font-mono text-xs text-slate-400">
+              #{order.id}
+            </p>
           </div>
 
           <button
@@ -58,6 +68,7 @@ const OrderDetailsModal = ({
         <div className="overflow-y-auto p-6">
           {/* Summary */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Payment */}
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center gap-2 text-slate-500">
                 <CreditCard size={16} />
@@ -74,6 +85,7 @@ const OrderDetailsModal = ({
               </span>
             </div>
 
+            {/* Items */}
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center gap-2 text-slate-500">
                 <Package size={16} />
@@ -86,6 +98,7 @@ const OrderDetailsModal = ({
               </p>
             </div>
 
+            {/* Date */}
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center gap-2 text-slate-500">
                 <CalendarDays size={16} />
@@ -110,22 +123,25 @@ const OrderDetailsModal = ({
             </div>
 
             <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 p-4 sm:grid-cols-2">
+              {/* Name */}
               <div>
                 <p className="text-xs text-slate-400">Name</p>
 
                 <p className="mt-1 text-sm font-medium text-slate-800">
-                  {order.displayName}
+                  {order.displayName || "Unknown Customer"}
                 </p>
               </div>
 
+              {/* Email */}
               <div>
                 <p className="text-xs text-slate-400">Email</p>
 
                 <p className="mt-1 break-all text-sm font-medium text-slate-800">
-                  {order.email}
+                  {order.email || "No email"}
                 </p>
               </div>
 
+              {/* Phone */}
               <div>
                 <p className="text-xs text-slate-400">Phone</p>
 
@@ -134,11 +150,12 @@ const OrderDetailsModal = ({
                 </p>
               </div>
 
+              {/* User ID */}
               <div>
                 <p className="text-xs text-slate-400">User ID</p>
 
                 <p className="mt-1 break-all font-mono text-xs text-slate-600">
-                  {order.userId}
+                  {userId || "Not available"}
                 </p>
               </div>
             </div>
@@ -159,53 +176,73 @@ const OrderDetailsModal = ({
 
             <div className="overflow-hidden rounded-xl border border-slate-200">
               <div className="divide-y divide-slate-200">
-                {order.products.map((product) => (
-                  <div
-                    key={`${product.id}-${product.sessionId}`}
-                    className="flex gap-4 p-4"
-                  >
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                    />
+                {order.products.map((product) => {
+                  const productTotal =
+                    Number(product.price) * Number(product.quantity);
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-900">
-                            {product.name}
-                          </h4>
+                  return (
+                    <div
+                      key={`${product.id}-${product.sessionId}`}
+                      className="flex gap-4 p-4"
+                    >
+                      {/* Image */}
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                          <Package size={20} className="text-slate-400" />
+                        </div>
+                      )}
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {product.material} · {product.color}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h4 className="text-sm font-semibold text-slate-900">
+                              {product.name}
+                            </h4>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {product.material} · {product.color}
+                            </p>
+                          </div>
+
+                          <p className="text-sm font-semibold text-slate-900">
+                            {formatCurrency(
+                              productTotal,
+                              order.currency,
+                            )}
                           </p>
                         </div>
 
-                        <p className="text-sm font-semibold text-slate-900">
-                          {formatCurrency(
-                            Number(product.price) * 100,
-                            order.currency,
-                          )}
-                        </p>
-                      </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                            Qty: {product.quantity}
+                          </span>
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          Qty: {product.quantity}
-                        </span>
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                            Price:{" "}
+                            {formatCurrency(
+                              Number(product.price),
+                              order.currency,
+                            )}
+                          </span>
 
-                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          Rating: {product.rating}
-                        </span>
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                            Rating: {product.rating}
+                          </span>
 
-                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs capitalize text-slate-600">
-                          {product.category.replace("-", " ")}
-                        </span>
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs capitalize text-slate-600">
+                            {product.category.replace("-", " ")}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

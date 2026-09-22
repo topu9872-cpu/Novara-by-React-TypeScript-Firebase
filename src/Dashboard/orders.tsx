@@ -1,124 +1,86 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, ShoppingBag, CreditCard, Clock, XCircle } from "lucide-react";
+
 import type { Order } from "../types/CustomarOrders";
 import OrderTable from "../DashboardComponents/OrderTable";
 import OrderDetailsModal from "../DashboardComponents/OrderDetailsModal";
-
-
-const initialOrders: Order[] = [
-  {
-    id: "law3yq",
-    amount: 12005,
-    createdAt: {
-      toDate: () => new Date("2026-09-16T11:58:51+06:00"),
-    } as Order["createdAt"],
-    currency: "usd",
-    displayName: "Mehedi Hasan Topu",
-    email: "topu9872@gmail.com",
-    paymentStatus: "paid",
-    phoneNumber: "",
-    userId: "tcRi6RMEnmTPWAMiG5bwI94MeH72",
-    products: [
-      {
-        category: "living-room",
-        color: "Brown",
-        description: "Premium luxury wooden sofa for modern living room.",
-        id: "6a15d50058a47c461cf60979",
-        image: "https://images.unsplash.com/photo-1540574163026-643ea20ade25",
-        material: "Teak Wood",
-        name: "Luxury Wooden Sofa",
-        price: "1200",
-        quantity: 10,
-        rating: "4.8",
-        stock: 10,
-        sessionId: "cs_test_example",
-      },
-    ],
-  },
-];
-
-function formatCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(amount / 100);
-}
-
-function formatDate(createdAt: Order["createdAt"]) {
-  return createdAt.toDate().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { getAllOrders } from "../services/AdminDashboard";
 
 export default function Orders() {
-  const [orders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<
-    "all" | "paid" | "pending" | "failed"
-  >("all");
+    "" | "paid" | "pending" | "failed"
+  >("");
 
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const filteredOrders = useMemo(() => {
-    const query = search.toLowerCase().trim();
+  useEffect(() => {
+    const orderFetch = async () => {
+      try {
+        setLoading(true);
 
-    return orders.filter((order) => {
-      const matchesSearch =
-        !query ||
-        order.id.toLowerCase().includes(query) ||
-        order.displayName.toLowerCase().includes(query) ||
-        order.email.toLowerCase().includes(query);
+        const data = await getAllOrders(search, paymentFilter);
 
-      const matchesPayment =
-        paymentFilter === "all" || order.paymentStatus === paymentFilter;
+        setOrders(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      return matchesSearch && matchesPayment;
-    });
-  }, [orders, search, paymentFilter]);
+    orderFetch();
+  }, [search, paymentFilter]);
 
-  const totalOrders = orders.length;
+  // Stats
+  const stats = useMemo(() => {
+    const total = orders.length;
 
-  const paidOrders = orders.filter(
-    (order) => order.paymentStatus === "paid",
-  ).length;
+    const paid = orders.filter(
+      (order) => order.paymentStatus === "paid",
+    ).length;
 
-  const pendingOrders = orders.filter(
-    (order) => order.paymentStatus === "pending",
-  ).length;
+    const pending = orders.filter(
+      (order) => order.paymentStatus === "pending",
+    ).length;
 
-  const failedOrders = orders.filter(
-    (order) => order.paymentStatus === "failed",
-  ).length;
+    const totalAmount = orders.reduce(
+      (sum, order) => sum + Number(order.amount || 0),
+      0,
+    );
 
-  const stats = [
-    {
-      title: "Total Orders",
-      value: totalOrders,
-      icon: ShoppingBag,
-      iconClass: "bg-slate-100 text-slate-700",
-    },
-    {
-      title: "Paid Orders",
-      value: paidOrders,
-      icon: CreditCard,
-      iconClass: "bg-emerald-50 text-emerald-600",
-    },
-    {
-      title: "Pending Orders",
-      value: pendingOrders,
-      icon: Clock,
-      iconClass: "bg-amber-50 text-amber-600",
-    },
-    {
-      title: "Failed Orders",
-      value: failedOrders,
-      icon: XCircle,
-      iconClass: "bg-red-50 text-red-600",
-    },
-  ];
+    return [
+      {
+        title: "Total Orders",
+        value: total,
+        icon: ShoppingBag,
+        iconClass: "bg-slate-100 text-slate-600",
+      },
+      {
+        title: "Paid Orders",
+        value: paid,
+        icon: CreditCard,
+        iconClass: "bg-emerald-50 text-emerald-600",
+      },
+      {
+        title: "Pending Orders",
+        value: pending,
+        icon: Clock,
+        iconClass: "bg-amber-50 text-amber-600",
+      },
+      {
+        title: "Total Revenue",
+        value: formatCurrency(totalAmount),
+        icon: CreditCard,
+        iconClass: "bg-blue-50 text-blue-600",
+      },
+    ];
+  }, [orders]);
+
+  const filteredOrders = orders;
 
   return (
     <div className="space-y-6">
@@ -212,12 +174,12 @@ export default function Orders() {
               value={paymentFilter}
               onChange={(event) =>
                 setPaymentFilter(
-                  event.target.value as "all" | "paid" | "pending" | "failed",
+                  event.target.value as "paid" | "pending" | "failed",
                 )
               }
               className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-400"
             >
-              <option value="all">All Payments</option>
+              <option value="">All Payments</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
@@ -226,12 +188,18 @@ export default function Orders() {
         </div>
 
         {/* Table */}
-        <OrderTable
-          orders={filteredOrders}
-          onView={(order) => setSelectedOrder(order)}
-          formatCurrency={formatCurrency}
-          formatDate={formatDate}
-        />
+        {loading ? (
+          <div className="flex min-h-60 items-center justify-center">
+            <p className="text-sm text-slate-500">Loading orders...</p>
+          </div>
+        ) : (
+          <OrderTable
+            orders={filteredOrders}
+            onView={(order) => setSelectedOrder(order)}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+          />
+        )}
       </div>
 
       {/* Details Modal */}
@@ -246,3 +214,25 @@ export default function Orders() {
     </div>
   );
 }
+
+// Currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+};
+
+// Date
+const formatDate = (date: any) => {
+  if (!date) return "N/A";
+
+  const value =
+    typeof date?.toDate === "function" ? date.toDate() : new Date(date);
+
+  return value.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};

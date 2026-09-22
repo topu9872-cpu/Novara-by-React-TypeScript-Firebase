@@ -100,6 +100,14 @@ const OrderTable = ({
 
             const firstProduct = order.products[0];
 
+            const initials =
+              order.displayName
+                ?.split(" ")
+                .map((name: string) => name[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase() || "U";
+
             return (
               <tr key={order.id} className="transition hover:bg-slate-50/60">
                 {/* Order */}
@@ -109,7 +117,7 @@ const OrderTable = ({
                       #{order.id.slice(0, 8)}
                     </p>
 
-                    <p className="mt-1 text-xs text-slate-400">{order.id}</p>
+                    <p className="mt-1 text-xs text-slate-400">{order.id.slice(8,20)}</p>
                   </div>
                 </td>
 
@@ -117,21 +125,16 @@ const OrderTable = ({
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-                      {order.displayName
-                        .split(" ")
-                        .map((name:string) => name[0])
-                        .slice(0, 2)
-                        .join("")
-                        .toUpperCase()}
+                      {initials}
                     </div>
 
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">
-                        {order.displayName}
+                        {order.displayName || "Unknown Customer"}
                       </p>
 
                       <p className="mt-0.5 max-w-48 truncate text-xs text-slate-500">
-                        {order.email}
+                        {order.email || "No email"}
                       </p>
                     </div>
                   </div>
@@ -143,7 +146,7 @@ const OrderTable = ({
                     {firstProduct?.image ? (
                       <img
                         src={firstProduct.image}
-                        alt={firstProduct.name}
+                        alt={firstProduct.name || "Product"}
                         className="h-10 w-10 rounded-lg object-cover"
                       />
                     ) : (

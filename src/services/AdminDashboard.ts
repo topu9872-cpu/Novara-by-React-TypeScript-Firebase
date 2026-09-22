@@ -4,9 +4,14 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  where,
+  query,
+  collection,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import type { Product, ProductStatus } from "../types/Product";
+import type { Order } from "../types/CustomarOrders";
 
 export const updateProductStatus = async (
   productId: string,
@@ -89,5 +94,32 @@ export const updateProduct = async (product: Product) => {
     });
   } catch (error) {
     console.error(error);
+  }
+};
+
+export const getAllOrders = async (search = "", payment: string): Promise<Order[]> => {
+  try {
+    const constraints: any[] = [];
+    if (payment) {
+      constraints.push(where("paymentStatus", "==", payment));
+    }
+    const q = query(collection(db, "orders"), ...constraints);
+    const snapshot = await getDocs(q);
+console.log(snapshot)
+    // Explicitly cast the mapped result as Order[]
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }) as Order)
+      .filter(
+        (order) =>
+          !search ||
+          order.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+          order.email?.toLowerCase().includes(search.toLowerCase()),
+      );
+  } catch (error) {
+    console.error(error);
+    return [];
   }
 };

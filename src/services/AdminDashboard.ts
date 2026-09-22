@@ -71,3 +71,23 @@ export const createProduct = async (
     return null;
   }
 };
+
+export const updateProduct = async (product: Product) => {
+  try {
+    const productId = product.id;
+    const productRef = doc(db, "Products", productId);
+    await updateDoc(productRef, {
+      category: product?.category,
+      color: product?.color,
+      description: product?.description,
+      image: product?.image,
+      material: product?.material,
+      name: product?.name,
+      price: product?.price,
+      rating: product?.rating,
+      stock: product?.stock?.toString(),
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};

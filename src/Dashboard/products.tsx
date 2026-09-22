@@ -7,9 +7,11 @@ import {
   createProduct,
   deleteProduct,
   restoreProduct,
+  updateProduct,
   updateProductStatus,
 } from "../services/AdminDashboard";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
 type ProductStatus = "Active" | "Inactive" | "Out of Stock";
 
 const normalizeProductStatus = (value?: string | null): ProductStatus => {
@@ -19,7 +21,6 @@ const normalizeProductStatus = (value?: string | null): ProductStatus => {
 };
 
 export default function Products() {
-  // 1. Initialize as an empty array to prevent undefined map/filter errors
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -30,8 +31,7 @@ export default function Products() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // 2. Fetch products and initialize statuses once data arrives
+  const reload = useNavigate();
   useEffect(() => {
     let cancelled = false;
 
@@ -40,9 +40,6 @@ export default function Products() {
         setIsLoading(true);
 
         const data = await getAllProducts();
-
-        // If another request has already finished or component
-        // is no longer active, ignore this result.
         if (cancelled) return;
 
         const fetchedProducts = data.products || [];
@@ -127,27 +124,19 @@ export default function Products() {
     }
   };
 
-  const handleEditProduct = (product: Product) => {
-    const nextStatus: ProductStatus =
-      product.stock === 0
-        ? "Out of Stock"
-        : normalizeProductStatus(product.status ?? productStatuses[product.id]);
-
-    setProducts((prev) =>
-      prev.map((item) =>
-        item.id === product.id
-          ? { ...item, ...product, status: nextStatus }
-          : item,
-      ),
-    );
-
-    setProductStatuses((prev) => ({
-      ...prev,
-      [product.id]: nextStatus,
-    }));
-
-    setEditingProduct(null);
-    setIsFormOpen(false);
+  const handleEditProduct = async (product: Product) => {
+    try {
+      setLoading(true);
+      await updateProduct(product);
+      toast.success("product update successfully !");
+      setIsFormOpen(false);
+      reload(0);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setEditingProduct(null);
+    }
   };
 
   const handleDeleteProduct = async (id: string, name: string) => {

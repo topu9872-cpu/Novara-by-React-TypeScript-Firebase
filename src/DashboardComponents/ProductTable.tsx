@@ -311,11 +311,10 @@ export default function ProductTable({
               </tr>
             ) : (
               paginatedProducts.map((product) => {
-                const currentStatus =
-                  product.stock === 0
-                    ? "Out of Stock"
-                    : productStatuses[product.id] || product.status || "Active";
-
+               const currentStatus =
+  product.stock <= 0
+    ? "Out of Stock"
+    : productStatuses[product.id] ?? product.status ?? "Active";
                 return (
                   <tr
                     key={product.id}
@@ -367,30 +366,29 @@ export default function ProductTable({
 
                     {/* Status */}
                     <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() => onToggleStatus(product.id)}
-                        disabled={product.stock === 0}
-                        className={`inline-flex min-w-20 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                          product.stock === 0
-                            ? "cursor-not-allowed border-red-100 bg-red-50 text-red-600"
-                            : currentStatus === "Active"
-                              ? "border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-100"
-                              : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            product.stock === 0
-                              ? "bg-red-500"
-                              : currentStatus === "Active"
-                                ? "bg-emerald-500"
-                                : "bg-slate-400"
-                          }`}
-                        />
-
-                        {currentStatus}
-                      </button>
+                     <button
+  type="button"
+  onClick={() => onToggleStatus(product.id)}
+  disabled={product.stock <= 0}
+  className={`inline-flex min-w-20 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+    product.stock <= 0
+      ? "cursor-not-allowed border-red-100 bg-red-50 text-red-600"
+      : currentStatus === "Active"
+        ? "border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-100"
+        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+  }`}
+>
+  <span
+    className={`h-1.5 w-1.5 rounded-full ${
+      product.stock <= 0
+        ? "bg-red-500"
+        : currentStatus === "Active"
+          ? "bg-emerald-500"
+          : "bg-slate-400"
+    }`}
+  />
+  {currentStatus}
+</button>
                     </td>
 
                     {/* Actions */}

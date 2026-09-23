@@ -45,7 +45,6 @@ export const restoreProduct = async (product: Product) => {
     const productRef = doc(db, "Products", product.id);
 
     const { id, ...productData } = product;
-
     await setDoc(productRef, productData);
   } catch (error) {
     console.error("Failed to restore product:", error);
@@ -97,21 +96,30 @@ export const updateProduct = async (product: Product) => {
   }
 };
 
-export const getAllOrders = async (search = "", payment: string): Promise<Order[]> => {
+export const getAllOrders = async (
+  search = "",
+  payment: string,
+): Promise<Order[]> => {
   try {
     const constraints: any[] = [];
-    if (payment) {
-      constraints.push(where("paymentStatus", "==", payment));
+    
+    // Only query if payment is selected AND it's not "All"
+    // Also convert to lowercase to match Firestore values ("paid", "pending", etc.)
+    if (payment && payment !== "All") {
+      constraints.push(where("paymentStatus", "==", payment.toLowerCase()));
     }
+
     const q = query(collection(db, "orders"), ...constraints);
     const snapshot = await getDocs(q);
-console.log(snapshot)
-    // Explicitly cast the mapped result as Order[]
+
     return snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }) as Order)
+      .map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as Order,
+      )
       .filter(
         (order) =>
           !search ||
@@ -119,7 +127,7 @@ console.log(snapshot)
           order.email?.toLowerCase().includes(search.toLowerCase()),
       );
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching orders:", error);
     return [];
   }
 };

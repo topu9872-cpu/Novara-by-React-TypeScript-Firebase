@@ -28,7 +28,6 @@ import Dashboard from "./Dashboard/Dashboard";
 import AdminLayout from "./Dashboard/layout";
 import orders from "./Dashboard/orders";
 import products from "./Dashboard/products";
-import customers from "./Dashboard/customers";
 import payments from "./Dashboard/payments";
 
 const router = createBrowserRouter([
@@ -126,10 +125,7 @@ const router = createBrowserRouter([
         path: "/dashboard/orders",
         Component: orders,
       },
-      {
-        path: "/dashboard/customers",
-        Component: customers,
-      },
+     
       {
         path: "/dashboard/payments",
         Component: payments,

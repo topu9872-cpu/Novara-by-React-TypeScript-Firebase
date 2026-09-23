@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  Users,
   CreditCard,
   Settings,
   Store,
@@ -30,11 +29,6 @@ const DashboardSidebar = () => {
       label: "Orders",
       path: "/dashboard/orders",
       icon: ShoppingCart,
-    },
-    {
-      label: "Customers",
-      path: "/dashboard/customers",
-      icon: Users,
     },
     {
       label: "Payments",

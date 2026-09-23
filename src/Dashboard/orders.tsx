@@ -47,11 +47,7 @@ export default function Orders() {
       (order) => order.paymentStatus === "pending",
     ).length;
 
-    const totalAmount = orders.reduce(
-      (sum, order) => sum + Number(order.amount || 0),
-      0,
-    );
-
+   
     return [
       {
         title: "Total Orders",
@@ -71,12 +67,7 @@ export default function Orders() {
         icon: Clock,
         iconClass: "bg-amber-50 text-amber-600",
       },
-      {
-        title: "Total Revenue",
-        value: formatCurrency(totalAmount),
-        icon: CreditCard,
-        iconClass: "bg-blue-50 text-blue-600",
-      },
+     
     ];
   }, [orders]);
 
@@ -96,7 +87,7 @@ export default function Orders() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
 

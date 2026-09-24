@@ -29,6 +29,7 @@ import AdminLayout from "./Dashboard/layout";
 import orders from "./Dashboard/orders";
 import products from "./Dashboard/products";
 import payments from "./Dashboard/payments";
+import Notifications from "./Dashboard/Notifications";
 
 const router = createBrowserRouter([
   {
@@ -129,6 +130,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/payments",
         Component: payments,
+      },
+      {
+        path: "/dashboard/notifications",
+        Component: Notifications,
       },
     ],
   },

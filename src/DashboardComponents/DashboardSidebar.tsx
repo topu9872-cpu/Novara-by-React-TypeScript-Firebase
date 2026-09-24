@@ -7,6 +7,7 @@ import {
   Store,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { NavLink } from "react-router";
 import { useState } from "react";
@@ -35,6 +36,16 @@ const DashboardSidebar = () => {
       path: "/dashboard/payments",
       icon: CreditCard,
     },
+     {
+    label: "Notifications",
+    path: "/dashboard/notifications",
+    icon: Bell,
+  },
+  {
+    label: "Settings",
+    path: "/settings",
+    icon: Settings,
+  },
   ];
 
   return (

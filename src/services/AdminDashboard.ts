@@ -1,5 +1,4 @@
 import {
-  doc,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -8,10 +7,12 @@ import {
   query,
   collection,
   getDocs,
+  getDoc,
+  doc,
 } from "firebase/firestore";
-import { db } from "../firebase/firebase";
 import type { Product, ProductStatus } from "../types/Product";
 import type { Order } from "../types/CustomarOrders";
+import { db } from "../firebase/firebase";
 
 export const updateProductStatus = async (
   productId: string,
@@ -102,7 +103,7 @@ export const getAllOrders = async (
 ): Promise<Order[]> => {
   try {
     const constraints: any[] = [];
-    
+
     // Only query if payment is selected AND it's not "All"
     // Also convert to lowercase to match Firestore values ("paid", "pending", etc.)
     if (payment && payment !== "All") {
@@ -130,4 +131,99 @@ export const getAllOrders = async (
     console.error("Error fetching orders:", error);
     return [];
   }
+};
+
+// Get or create visitor ID
+export const getVisitorId = () => {
+  let visitorId = localStorage.getItem("visitor_id");
+
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem("visitor_id", visitorId);
+  }
+
+  return visitorId;
+};
+
+// Get month in YYYY-MM format
+export const getMonthKey = (date = new Date()) => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}`;
+};
+
+// Track visitor once per month
+export const trackUniqueView = async () => {
+  const visitorId = getVisitorId();
+  const currentMonth = getMonthKey();
+
+  const visitorRef = doc(db, "portfolioViews", visitorId);
+
+  const visitorSnap = await getDoc(visitorRef);
+
+  // New visitor
+  if (!visitorSnap.exists()) {
+    await setDoc(visitorRef, {
+      firstVisit: serverTimestamp(),
+      lastVisit: serverTimestamp(),
+      months: [currentMonth],
+    });
+
+    return true;
+  }
+
+  const data = visitorSnap.data();
+  const months: string[] = data.months || [];
+
+  // Already counted this month
+  if (months.includes(currentMonth)) {
+    await updateDoc(visitorRef, {
+      lastVisit: serverTimestamp(),
+    });
+
+    return false;
+  }
+
+  // New month for existing visitor
+  await updateDoc(visitorRef, {
+    lastVisit: serverTimestamp(),
+    months: [...months, currentMonth],
+  });
+
+  return true;
+};
+
+// Get unique views for a specific month
+export const getMonthlyUniqueViews = async (month: string) => {
+  const viewsRef = collection(db, "portfolioViews");
+
+  const q = query(viewsRef, where("months", "array-contains", month));
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.size;
+};
+
+// Get last 6 months
+export const getLastSixMonths = () => {
+  const months: {
+    key: string;
+    name: string;
+  }[] = [];
+
+  const now = new Date();
+
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+
+    months.push({
+      key: getMonthKey(date),
+      name: date.toLocaleString("en-US", {
+        month: "long",
+      }),
+    });
+  }
+
+  return months;
 };

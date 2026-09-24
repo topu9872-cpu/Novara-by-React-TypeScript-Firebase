@@ -79,18 +79,18 @@ export default function Products() {
       total: products.length,
 
       active: products.filter(
-        (product) => product.stock > 0 && product.status === "Active",
+        (product) => Number(product.stock) > 0 && product.status === "Active",
       ).length,
 
       inactive: products.filter(
-        (product) => product.stock > 0 && product.status === "Inactive",
+        (product) => Number(product.stock) > 0 && product.status === "Inactive",
       ).length,
 
       lowStock: products.filter(
-        (product) => product.stock > 0 && product.stock <= 5,
+        (product) => Number(product.stock) > 0 && Number(product.stock) <= 5,
       ).length,
 
-      outOfStock: products.filter((product) => product.stock === 0).length,
+      outOfStock: products.filter((product) => Number(product.stock) === 0).length,
     };
   }, [products]);
 
@@ -300,7 +300,7 @@ export default function Products() {
     setProducts((prev) =>
       prev.map((product) => {
         if (product.id !== id) return product;
-        const newStock = Math.max(0, product.stock + change);
+        const newStock = Math.max(0, Number(product?.stock) + change);
         return { ...product, stock: newStock };
       }),
     );
@@ -309,7 +309,7 @@ export default function Products() {
       const currentProduct = products.find((product) => product.id === id);
       if (!currentProduct) return prev;
 
-      const newStock = Math.max(0, currentProduct.stock + change);
+      const newStock = Math.max(0, Number(currentProduct.stock) + change);
 
       if (newStock === 0) {
         return { ...prev, [id]: "Out of Stock" };

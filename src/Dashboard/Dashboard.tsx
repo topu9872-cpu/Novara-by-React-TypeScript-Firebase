@@ -114,7 +114,7 @@ const Dashboard = () => {
     fetchAll();
   }, []);
 
-  const outOfStock = product?.filter((item) => item.stock === 0).length ?? 0;
+  const outOfStock = product?.filter((item) => Number(item.stock) === 0).length ?? 0;
 
   const percentage =
     previousMonthViews === 0

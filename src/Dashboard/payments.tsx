@@ -34,7 +34,7 @@ const Payments = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   // Fetch and map payments from API when search or status filter changes
@@ -186,7 +186,7 @@ const Payments = () => {
                 onChange={(event) => setStatusFilter(event.target.value)}
                 className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-slate-400"
               >
-                <option value="All">All Status</option>
+                <option value="">All Status</option>
                 <option value="Paid">Paid</option>
                 <option value="Pending">Pending</option>
                 <option value="Failed">Failed</option>

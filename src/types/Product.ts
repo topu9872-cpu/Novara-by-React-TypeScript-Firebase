@@ -16,7 +16,7 @@ export interface Product {
 
   rating: string | number;
 
-  stock: number;
+  stock?: number;
   status?: ProductStatus;
   isDeleted?: boolean;
   deletedAt?: Date | string | null;

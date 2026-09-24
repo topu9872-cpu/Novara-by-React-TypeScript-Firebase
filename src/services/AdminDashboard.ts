@@ -9,6 +9,7 @@ import {
   getDocs,
   getDoc,
   doc,
+  getCountFromServer,
 } from "firebase/firestore";
 import type { Product, ProductStatus } from "../types/Product";
 import type { Order } from "../types/CustomarOrders";
@@ -99,33 +100,32 @@ export const updateProduct = async (product: Product) => {
 
 export const getAllOrders = async (
   search = "",
-  payment: string,
+  payment = ""
 ): Promise<Order[]> => {
   try {
-    const constraints: any[] = [];
+    const constraints =
+      payment
+        ? [where("paymentStatus", "==", payment.toLowerCase())]
+        : [];
 
-    // Only query if payment is selected AND it's not "All"
-    // Also convert to lowercase to match Firestore values ("paid", "pending", etc.)
-    if (payment && payment !== "All") {
-      constraints.push(where("paymentStatus", "==", payment.toLowerCase()));
-    }
-
-    const q = query(collection(db, "orders"), ...constraints);
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(
+      query(collection(db, "orders"), ...constraints)
+    );
 
     return snapshot.docs
-      .map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          }) as Order,
-      )
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }) as Order)
       .filter(
         (order) =>
           !search ||
-          order.displayName?.toLowerCase().includes(search.toLowerCase()) ||
-          order.email?.toLowerCase().includes(search.toLowerCase()),
+          order.displayName
+            ?.toLowerCase()
+            .includes(search.toLowerCase()) ||
+          order.email
+            ?.toLowerCase()
+            .includes(search.toLowerCase())
       );
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -226,4 +226,17 @@ export const getLastSixMonths = () => {
   }
 
   return months;
+};
+
+
+export const getMonthlyOrderCount = async (start: Date, end: Date) => {
+  const q = query(
+    collection(db, "orders"),
+    where("createdAt", ">=", start),
+    where("createdAt", "<", end)
+  );
+
+  const snapshot = await getCountFromServer(q);
+
+  return snapshot.data().count;
 };

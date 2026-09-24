@@ -5,7 +5,6 @@ import type { Order } from "../types/CustomarOrders";
 import OrderTable from "../DashboardComponents/OrderTable";
 import OrderDetailsModal from "../DashboardComponents/OrderDetailsModal";
 import { getAllOrders } from "../services/AdminDashboard";
-
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -47,7 +46,7 @@ export default function Orders() {
       (order) => order.paymentStatus === "pending",
     ).length;
 
-   
+
     return [
       {
         title: "Total Orders",
@@ -204,6 +203,7 @@ export default function Orders() {
       )}
     </div>
   );
+  
 }
 
 // Currency
@@ -226,4 +226,5 @@ const formatDate = (date: any) => {
     month: "short",
     day: "numeric",
   });
+  
 };

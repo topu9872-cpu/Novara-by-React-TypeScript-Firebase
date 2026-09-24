@@ -36,20 +36,13 @@ const getCurrentUser = async (): Promise<User | null> => {
   });
 };
 
-export const getProducts = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, "Products"));
+export const getProducts = async (): Promise<Product[]> => {
+  const snapshot = await getDocs(collection(db, "Products"));
 
-    const products = snapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
-
-    return products;
-  } catch (error) {
-    console.error("Firestore Error:", error);
-    return [];
-  }
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Product[];
 };
 
 interface GetProductsParams {

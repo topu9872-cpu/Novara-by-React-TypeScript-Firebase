@@ -82,7 +82,7 @@ export default function ProductTable({
     if (status !== "All Status") {
       result = result.filter((product) => {
         const currentStatus =
-          product.stock === 0
+          Number(product.stock) === 0
             ? "Out of Stock"
             : productStatuses[product.id] || product.status || "Active";
 
@@ -99,10 +99,10 @@ export default function ProductTable({
           return Number(b.price) - Number(a.price);
 
         case "stock-low":
-          return a.stock - b.stock;
+          return Number(a.stock) - Number(b.stock);
 
         case "stock-high":
-          return b.stock - a.stock;
+          return Number(b.stock) - Number(a.stock);
 
         case "name":
         default:
@@ -312,7 +312,7 @@ export default function ProductTable({
             ) : (
               paginatedProducts.map((product) => {
                const currentStatus =
-  product.stock <= 0
+  Number(product.stock) <= 0
     ? "Out of Stock"
     : productStatuses[product.id] ?? product.status ?? "Active";
                 return (
@@ -360,7 +360,7 @@ export default function ProductTable({
                     {/* Stock */}
                     <td className="px-5 py-4">
                       <span className="min-w-6 text-center text-sm">
-                        {product.stock}
+                        {Number(product.stock)}
                       </span>
                     </td>
 
@@ -369,9 +369,9 @@ export default function ProductTable({
                      <button
   type="button"
   onClick={() => onToggleStatus(product.id)}
-  disabled={product.stock <= 0}
+  disabled={Number(product.stock) <= 0}
   className={`inline-flex min-w-20 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-    product.stock <= 0
+    Number(product.stock) <= 0
       ? "cursor-not-allowed border-red-100 bg-red-50 text-red-600"
       : currentStatus === "Active"
         ? "border-emerald-100 bg-emerald-50 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-100"
@@ -380,7 +380,7 @@ export default function ProductTable({
 >
   <span
     className={`h-1.5 w-1.5 rounded-full ${
-      product.stock <= 0
+      Number(product.stock) <= 0
         ? "bg-red-500"
         : currentStatus === "Active"
           ? "bg-emerald-500"

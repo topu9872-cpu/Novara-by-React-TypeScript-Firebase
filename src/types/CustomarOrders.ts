@@ -25,5 +25,5 @@ export type Order = {
   paymentStatus: "paid" | "pending" | "failed";
   phoneNumber: string;
   products: OrderProduct[];
-  userId: string;
+  userId?: string;
 };

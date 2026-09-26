@@ -38,7 +38,7 @@ const OrderDetailsModal = ({
     0,
   );
 
-  const userId = order.products[0].userId!;
+  const userId = order.userId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm">

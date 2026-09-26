@@ -30,26 +30,28 @@ export interface UserNotificationItem {
 /* =========================================
    CREATE USER NOTIFICATION
 ========================================= */
-
 export const createUserNotification = async ({
+  userId,
   title,
   message,
   type,
 }: {
+  userId: string;
   title: string;
   message: string;
   type: UserNotificationType;
 }) => {
   try {
-    const user = auth.currentUser;
-
-    if (!user?.email) {
-      console.error("❌ User email not found");
+    if (!userId) {
+      console.error("❌ User ID not found");
       return;
     }
 
+    const user = auth.currentUser;
+
     await addDoc(collection(db, "userNotifications"), {
-      email: user.email,
+      userId,
+      email: user?.email || "",
       title,
       message,
       type,
@@ -57,10 +59,7 @@ export const createUserNotification = async ({
       createdAt: serverTimestamp(),
     });
   } catch (error) {
-    console.error(
-      "Create user notification error:",
-      error,
-    );
+    console.error("Create user notification error:", error);
   }
 };
 

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 
 import {
   listenUserNotifications,
-  markAllUserNotificationsAsRead,
   type UserNotificationItem,
 } from "../services/userNotifications";
 
@@ -59,9 +58,6 @@ const UserNotifications = () => {
       }
 
       setLoading(true);
-
-      console.log("👤 Current user:", user.email);
-
       // Start Firestore listener
       unsubscribeNotifications = listenUserNotifications((data) => {
         setNotifications(data);
@@ -77,14 +73,6 @@ const UserNotifications = () => {
       unsubscribeAuth();
     };
   }, []);
-
-  const unreadNotifications = notifications.filter(
-    (notification) => !notification.read,
-  ).length;
-
-  const handleMarkAllNotificationsRead = async () => {
-    await markAllUserNotificationsAsRead(notifications);
-  };
 
   return (
     <div className="min-h-screen bg-neutral-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -107,40 +95,6 @@ const UserNotifications = () => {
                 </p>
               </div>
             </div>
-          </div>
-
-          {!loading && unreadNotifications > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAllNotificationsRead}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800"
-            >
-              <CheckCheck className="h-4 w-4" />
-              Mark all as read
-            </button>
-          )}
-        </div>
-
-        {/* Summary */}
-        <div className="mb-6 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-neutral-100 bg-white p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-              Total
-            </p>
-
-            <p className="mt-1 text-2xl font-bold text-neutral-900">
-              {loading ? "—" : notifications.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-neutral-100 bg-white p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-              Unread
-            </p>
-
-            <p className="mt-1 text-2xl font-bold text-emerald-700">
-              {loading ? "—" : unreadNotifications}
-            </p>
           </div>
         </div>
 

@@ -10,10 +10,17 @@ import {
   Bell,
 } from "lucide-react";
 import { NavLink } from "react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import {
+  listenNotifications,
+  type NotificationItem,
+} from "../services/notifications";
 
 const DashboardSidebar = () => {
   const [open, setOpen] = useState(false);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const menuItems = [
     {
@@ -36,17 +43,33 @@ const DashboardSidebar = () => {
       path: "/dashboard/payments",
       icon: CreditCard,
     },
-     {
-    label: "Notifications",
-    path: "/dashboard/notifications",
-    icon: Bell,
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: Settings,
-  },
+    {
+      label: "Notifications",
+      path: "/dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      label: "Settings",
+      path: "/settings",
+      icon: Settings,
+    },
   ];
+
+  /* ----------------------------------
+     LISTEN TO NOTIFICATIONS
+  ---------------------------------- */
+  useEffect(() => {
+    const unsubscribe = listenNotifications(setNotifications);
+
+    return () => unsubscribe();
+  }, []);
+
+  /* ----------------------------------
+     UNREAD COUNT
+  ---------------------------------- */
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read,
+  ).length;
 
   return (
     <>
@@ -59,6 +82,7 @@ const DashboardSidebar = () => {
 
           <div>
             <p className="text-sm font-bold text-neutral-950">Novara</p>
+
             <p className="text-[9px] uppercase tracking-widest text-neutral-400">
               Admin
             </p>
@@ -139,15 +163,35 @@ const DashboardSidebar = () => {
                   end={item.path === "/dashboard"}
                   onClick={() => setOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:scale-102 ${
+                    `flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:scale-102 ${
                       isActive
                         ? "bg-green-800 text-white"
                         : "text-neutral-500 hover:bg-green-100 hover:text-neutral-950"
                     }`
                   }
                 >
-                  <Icon size={18} strokeWidth={1.8} />
-                  <span>{item.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Icon size={18} strokeWidth={1.8} />
+
+                        <span>{item.label}</span>
+                      </div>
+
+                      {/* Notification Badge */}
+                      {item.label === "Notifications" && unreadCount > 0 && (
+                        <span
+                          className={`flex min-w-5 h-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                            isActive
+                              ? "bg-white text-green-800"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </>
+                  )}
                 </NavLink>
               );
             })}
@@ -162,18 +206,20 @@ const DashboardSidebar = () => {
             <NavLink
               to="/shop"
               onClick={() => setOpen(false)}
-              className="flex items-center hover:scale-102 hover:bg-green-100 gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-500 transition  hover:text-neutral-950"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-500 transition hover:scale-102 hover:bg-green-100 hover:text-neutral-950"
             >
               <Store size={18} strokeWidth={1.8} />
+
               <span>View Store</span>
             </NavLink>
 
             <NavLink
               to="/settings"
               onClick={() => setOpen(false)}
-              className="mt-1 hover:scale-102 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-500 transition hover:bg-green-100 hover:text-neutral-950"
+              className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-500 transition hover:scale-102 hover:bg-green-100 hover:text-neutral-950"
             >
               <Settings size={18} strokeWidth={1.8} />
+
               <span>Settings</span>
             </NavLink>
           </div>

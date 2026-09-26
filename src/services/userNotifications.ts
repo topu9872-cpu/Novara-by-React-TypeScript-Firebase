@@ -5,7 +5,6 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
-  updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
@@ -111,28 +110,6 @@ export const listenUserNotifications = (
       );
     },
   );
-};
-
-/* =========================================
-   MARK ONE AS READ
-========================================= */
-
-export const markUserNotificationAsRead = async (
-  notificationId: string,
-) => {
-  try {
-    await updateDoc(
-      doc(db, "userNotifications", notificationId),
-      {
-        read: true,
-      },
-    );
-  } catch (error) {
-    console.error(
-      "Mark user notification as read error:",
-      error,
-    );
-  }
 };
 
 /* =========================================

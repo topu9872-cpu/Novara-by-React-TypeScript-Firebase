@@ -20,6 +20,11 @@ import { auth, db } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User as FirebaseUser } from "firebase/auth";
 import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
+import {
+  listenUserNotifications,
+  markAllUserNotificationsAsRead,
+  type UserNotificationItem,
+} from "../services/userNotifications";
 
 interface NavItem {
   label: string;
@@ -174,6 +179,49 @@ export const Navbar: React.FC = () => {
         : "text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900"
     }`;
 
+  const [notifications, setNotifications] = useState<UserNotificationItem[]>(
+    [],
+  );
+
+  useEffect(() => {
+    let unsubscribeNotifications: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // Remove previous notification listener
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+        unsubscribeNotifications = null;
+      }
+
+      if (!user) {
+        setNotifications([]);
+
+        return;
+      }
+
+      // Start Firestore listener
+      unsubscribeNotifications = listenUserNotifications((data) => {
+        setNotifications(data);
+      });
+    });
+
+    return () => {
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+
+      unsubscribeAuth();
+    };
+  }, []);
+
+  const unreadNotifications = notifications.filter(
+    (notification) => !notification.read,
+  ).length;
+
+  const handleMarkAllNotificationsRead = async () => {
+    await markAllUserNotificationsAsRead(notifications);
+  };
+
   return (
     <header
       ref={navbarRef}
@@ -284,10 +332,22 @@ export const Navbar: React.FC = () => {
                   <li>
                     <NavLink
                       to="/user-notifications"
+                      onClick={handleMarkAllNotificationsRead}
                       className={getDropdownLinkClass}
                     >
-                      <Bell className="text-emerald-800 w-4 h-4" />
-                      <span>Notifications</span>
+                      <div className="flex items-center gap-2.5">
+                        <Bell className="h-4 w-4 text-emerald-700" />
+
+                        <span>Notifications</span>
+                      </div>
+
+                      {unreadNotifications > 0 && (
+                        <span className="min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">
+                          {unreadNotifications > 99
+                            ? "99+"
+                            : unreadNotifications}
+                        </span>
+                      )}
                     </NavLink>
                   </li>
                   {role === "admin" && (

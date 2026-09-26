@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   Bell,
-  CheckCheck,
   CreditCard,
   Package,
   ShoppingBag,
@@ -18,11 +17,16 @@ import {
 const Notifications = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
+  const [loading, setLoading] = useState(true);
+
   /* ----------------------------------
      LISTEN TO NOTIFICATIONS
   ---------------------------------- */
   useEffect(() => {
-    const unsubscribe = listenNotifications(setNotifications);
+    const unsubscribe = listenNotifications((data) => {
+      setNotifications(data);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, []);
@@ -41,37 +45,17 @@ const Notifications = () => {
     if (!notification || notification.read) return;
 
     try {
+      // Update UI immediately
       setNotifications((prev) =>
         prev.map((item) =>
           item.id === notificationId ? { ...item, read: true } : item,
         ),
       );
 
+      // Update Firestore
       await markNotificationAsRead(notificationId);
     } catch (error) {
       console.error("Failed to mark read:", error);
-    }
-  };
-
-  /* ----------------------------------
-     MARK ALL AS READ
-  ---------------------------------- */
-  const markAllAsRead = async () => {
-    const unread = notifications.filter((n) => !n.read);
-
-    if (unread.length === 0) return;
-
-    try {
-      setNotifications((prev) =>
-        prev.map((n) => ({
-          ...n,
-          read: true,
-        })),
-      );
-
-      await Promise.all(unread.map((n) => markNotificationAsRead(n.id)));
-    } catch (error) {
-      console.error("Failed to mark all read:", error);
     }
   };
 
@@ -205,16 +189,16 @@ const Notifications = () => {
   };
 
   return (
-    <div className="w-full rounded-xl  bg-background shadow-sm">
+    <div className="w-full rounded-xl bg-background shadow-sm">
       {/* HEADER */}
-      <div className="flex flex-col justify-between gap-4  p-6 sm:flex-row sm:items-center md:p-8">
+      <div className="flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center md:p-8">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Notifications
             </h1>
 
-            {unreadCount > 0 && (
+            {!loading && unreadCount > 0 && (
               <span className="flex h-6 items-center justify-center rounded-full bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-sm">
                 {unreadCount} new
               </span>
@@ -225,25 +209,21 @@ const Notifications = () => {
             Review your latest store activity and alerts.
           </p>
         </div>
-
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={markAllAsRead}
-            className="group flex items-center gap-2 rounded-lg border border-transparent bg-muted/50 px-4 py-2 text-sm font-medium text-foreground transition-all hover:border-border/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <CheckCheck
-              size={16}
-              className="text-muted-foreground transition-transform group-hover:text-foreground"
-            />
-            Mark all as read
-          </button>
-        )}
       </div>
 
       {/* NOTIFICATIONS */}
       <div>
-        {notifications.length === 0 ? (
+        {/* LOADING */}
+        {loading ? (
+          <div className="flex min-h-80 flex-col items-center justify-center px-4 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+
+            <p className="mt-4 text-sm text-muted-foreground">
+              Loading notifications...
+            </p>
+          </div>
+        ) : notifications.length === 0 ? (
+          /* EMPTY */
           <div className="flex flex-col items-center justify-center px-4 py-32 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-border/50 bg-muted/30 shadow-inner">
               <Bell size={32} className="text-muted-foreground/50" />
@@ -259,16 +239,16 @@ const Notifications = () => {
             </p>
           </div>
         ) : (
+          /* NOTIFICATION LIST */
           <div className="flex flex-col gap-3 p-4 md:p-6">
             {notifications.map((notification) => {
               const isUnread = !notification.read;
 
               return (
-                <button
+                <div
                   key={notification.id}
-                  type="button"
-                  onClick={() => handleNotificationClick(notification.id)}
-                  className={`group relative flex w-full items-start gap-4 rounded-2xl border bg-background p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-6 ${getTypeStyle(
+                  onMouseEnter={() => handleNotificationClick(notification.id)}
+                  className={`group relative flex w-full cursor-pointer items-start gap-4 rounded-2xl border bg-background p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-6 ${getTypeStyle(
                     notification.type,
                     notification.read,
                   )} ${isUnread ? "bg-muted/10" : "opacity-90"}`}
@@ -318,7 +298,7 @@ const Notifications = () => {
                       {notification.message}
                     </p>
 
-                    {/* FOOTER */}
+                    {/* PRIORITY */}
                     <div className="mt-3 flex items-center gap-3">
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getPriorityStyle(
@@ -327,13 +307,9 @@ const Notifications = () => {
                       >
                         {notification.priority} priority
                       </span>
-
-                      <span className="text-xs text-muted-foreground">
-                        {notification.read ? "Read" : "Unread"}
-                      </span>
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

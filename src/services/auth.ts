@@ -7,78 +7,111 @@ import {
   FacebookAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 
 import { auth } from "../firebase/firebase";
+import { createNotification } from "../services/notifications";
 
 const googleProvider = new GoogleAuthProvider();
 const facebookProvider = new FacebookAuthProvider();
 const githubProvider = new GithubAuthProvider();
 
-// Email Signup
-export const signUp = async (
-  name: string,
-  email: string,
-  password: string
+/* ----------------------------------
+   NEW USER NOTIFICATION
+---------------------------------- */
+
+const createNewUserNotification = async (
+  name: string | null,
+  email: string | null,
 ) => {
-  const result = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
+  await createNotification({
+    title: "New User",
+    message: `${name || email || "A new user"} created a new account.`,
+    type: "new_user",
+    priority: "low",
+  });
+};
+
+/* ----------------------------------
+   EMAIL SIGNUP
+---------------------------------- */
+
+export const signUp = async (name: string, email: string, password: string) => {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
 
   await updateProfile(result.user, {
     displayName: name,
   });
 
-  return result.user;
-};
-
-// Email Login
-export const signIn = async (
-  email: string,
-  password: string
-) => {
-  const result = await signInWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
+  // Automatically create notification
+  await createNewUserNotification(name, result.user.email);
 
   return result.user;
 };
 
-// Google
+/* ----------------------------------
+   EMAIL LOGIN
+---------------------------------- */
+
+export const signIn = async (email: string, password: string) => {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+
+  return result.user;
+};
+
+/* ----------------------------------
+   GOOGLE
+---------------------------------- */
+
 export const googleLogin = async () => {
-  const result = await signInWithPopup(
-    auth,
-    googleProvider
-  );
+  const result = await signInWithPopup(auth, googleProvider);
+
+  const additionalUserInfo = getAdditionalUserInfo(result);
+
+  if (additionalUserInfo?.isNewUser) {
+    await createNewUserNotification(result.user.displayName, result.user.email);
+  }
 
   return result.user;
 };
 
-// Facebook
+/* ----------------------------------
+   FACEBOOK
+---------------------------------- */
+
 export const facebookLogin = async () => {
-  const result = await signInWithPopup(
-    auth,
-    facebookProvider
-  );
+  const result = await signInWithPopup(auth, facebookProvider);
+
+  const additionalUserInfo = getAdditionalUserInfo(result);
+
+  if (additionalUserInfo?.isNewUser) {
+    await createNewUserNotification(result.user.displayName, result.user.email);
+  }
 
   return result.user;
 };
 
-// GitHub
+/* ----------------------------------
+   GITHUB
+---------------------------------- */
+
 export const githubLogin = async () => {
-  const result = await signInWithPopup(
-    auth,
-    githubProvider
-  );
+  const result = await signInWithPopup(auth, githubProvider);
+
+  const additionalUserInfo = getAdditionalUserInfo(result);
+
+  if (additionalUserInfo?.isNewUser) {
+    await createNewUserNotification(result.user.displayName, result.user.email);
+  }
 
   return result.user;
 };
 
-// Logout
+/* ----------------------------------
+   LOGOUT
+---------------------------------- */
+
 export const logout = async () => {
   await signOut(auth);
 };

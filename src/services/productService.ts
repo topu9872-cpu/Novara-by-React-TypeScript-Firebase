@@ -20,6 +20,7 @@ import type { CartItem } from "../types/Cart";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { toast } from "sonner";
 import type { Address } from "../types/Address";
+import { createNotification } from "./notifications";
 
 const getCurrentUser = async (): Promise<User | null> => {
   const auth = getAuth();
@@ -125,15 +126,20 @@ export const createOrder = async (
 
     const orderRef = doc(db, "orders", sessionId);
 
-    const result = await runTransaction(db, async (transaction) => {
-      // =====================================
-      // 1. CHECK STOCK FOR EVERY PRODUCT
-      // =====================================
+    const stockNotifications: {
+      type: "low_stock" | "out_of_stock";
+      productName: string;
+      newStock: number;
+    }[] = [];
 
+    // =====================================
+    // 1. CREATE ORDER + UPDATE STOCK
+    // =====================================
+
+    const result = await runTransaction(db, async (transaction) => {
       const productsToUpdate = [];
 
       for (const item of orderData.products) {
-        // item.id = Product document ID
         const productRef = doc(db, "Products", item.id);
 
         const productSnap = await transaction.get(productRef);
@@ -147,17 +153,9 @@ export const createOrder = async (
         const currentStock = Number(product.stock || 0);
         const buyingQuantity = Number(item.quantity || 0);
 
-        // =====================================
-        // STOCK = 0
-        // =====================================
-
         if (currentStock <= 0) {
           throw new Error(`${item.name} is out of stock`);
         }
-
-        // =====================================
-        // BUYING MORE THAN AVAILABLE
-        // =====================================
 
         if (buyingQuantity > currentStock) {
           throw new Error(
@@ -165,16 +163,37 @@ export const createOrder = async (
           );
         }
 
-        // Save information for later update
+        const newStock = currentStock - buyingQuantity;
+
+        // =====================================
+        // CHECK STOCK NOTIFICATION
+        // =====================================
+
+        if (currentStock > 5 && newStock <= 5 && newStock > 0) {
+          stockNotifications.push({
+            type: "low_stock",
+            productName: item.name,
+            newStock,
+          });
+        }
+
+        if (currentStock > 0 && newStock === 0) {
+          stockNotifications.push({
+            type: "out_of_stock",
+            productName: item.name,
+            newStock,
+          });
+        }
+
         productsToUpdate.push({
           productRef,
           product,
-          buyingQuantity,
+          newStock,
         });
       }
 
       // =====================================
-      // 2. CREATE ORDER
+      // CREATE ORDER
       // =====================================
 
       const order = {
@@ -187,22 +206,34 @@ export const createOrder = async (
       });
 
       // =====================================
-      // 3. DECREASE STOCK
+      // DECREASE STOCK
       // =====================================
 
       for (const item of productsToUpdate) {
-        const currentStock = Number(item.product.stock || 0);
-        const newStock = currentStock - item.buyingQuantity;
-
         transaction.update(item.productRef, {
-          stock: newStock,
+          stock: item.newStock,
 
           status:
-            newStock === 0 ? "Out of Stock" : item.product.status || "Active",
+            item.newStock === 0
+              ? "Out of Stock"
+              : item.product.status || "Active",
         });
       }
 
       return order;
+    });
+
+    // =====================================
+    // 2. NEW ORDER NOTIFICATION
+    // =====================================
+
+    await createNotification({
+      title: "New Order",
+      message: `${
+        orderData.displayName || orderData.email
+      } placed a new order worth $${Number(orderData.amount).toFixed(2)}.`,
+      type: "new_order",
+      priority: "high",
     });
 
     return result as Orders;

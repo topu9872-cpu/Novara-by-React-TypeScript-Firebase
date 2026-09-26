@@ -40,8 +40,8 @@ export const Card: React.FC<CardProps> = ({ product }) => {
       ? parseFloat(product.rating)
       : product.rating || 0;
 
-  const isOutOfStock = product.stock === 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  const isOutOfStock = Number(product.stock) === 0;
+  const isLowStock = Number(product.stock) > 0 && Number(product.stock) <= 5;
 
   return (
     <div
@@ -89,7 +89,7 @@ export const Card: React.FC<CardProps> = ({ product }) => {
                     isLowStock ? "text-orange-500" : "text-neutral-400"
                   }`}
                 >
-                  {product.stock} {product.stock === 1 ? "item" : "items"} left
+                  {Number(product.stock)} {Number(product.stock) === 1 ? "item" : "items"} left
                 </span>
               )}
             </div>

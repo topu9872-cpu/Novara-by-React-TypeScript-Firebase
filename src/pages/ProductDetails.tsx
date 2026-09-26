@@ -57,15 +57,15 @@ const ProductDetails: React.FC = () => {
     if (!product) return;
 
     // Product is out of stock
-    if (product.stock <= 0) {
+    if (Number(product.stock) <= 0) {
       toast.error("This product is out of stock.");
       return;
     }
 
     // Quantity is greater than available stock
-    if (quantity > product.stock) {
-      toast.error(`Only ${product.stock} item(s) available.`);
-      setQuantity(product.stock);
+    if (quantity > Number(product.stock)) {
+      toast.error(`Only ${Number(product.stock)} item(s) available.`);
+      setQuantity(Number(product.stock));
       return;
     }
 
@@ -99,15 +99,15 @@ const ProductDetails: React.FC = () => {
     if (!product) return;
 
     // Product is out of stock
-    if (product.stock <= 0) {
+    if (Number(product?.stock )<= 0) {
       toast.error("This product is out of stock.");
       return;
     }
 
     // Quantity is greater than available stock
-    if (quantity > product.stock) {
-      toast.error(`Only ${product.stock} item(s) available.`);
-      setQuantity(product.stock);
+    if (quantity > Number(product.stock)) {
+      toast.error(`Only ${Number(product.stock)} item(s) available.`);
+      setQuantity(Number(product.stock));
       return;
     }
 
@@ -165,8 +165,8 @@ const ProductDetails: React.FC = () => {
       ? parseFloat(product.rating)
       : product.rating || 0;
 
-  const isOutOfStock = product.stock <= 0;
-  const isMaxQuantity = quantity >= product.stock;
+  const isOutOfStock = Number(product.stock) <= 0;
+  const isMaxQuantity = quantity >= Number(product.stock);
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10 mb-16">
@@ -225,12 +225,12 @@ const ProductDetails: React.FC = () => {
                 ) : (
                   <span
                     className={`text-xs font-medium ${
-                      product.stock <= 5
+                      Number(product.stock) <= 5
                         ? "text-orange-500"
                         : "text-neutral-500"
                     }`}
                   >
-                    {product.stock} {product.stock === 1 ? "item" : "items"}{" "}
+                    {Number(product.stock)} {Number(product.stock) === 1 ? "item" : "items"}{" "}
                     available
                   </span>
                 )}
@@ -308,8 +308,8 @@ const ProductDetails: React.FC = () => {
                   type="button"
                   disabled={isOutOfStock || isMaxQuantity}
                   onClick={() => {
-                    if (quantity >= product.stock) {
-                      toast.error(`Only ${product.stock} item(s) available.`);
+                    if (quantity >= Number(product.stock)) {
+                      toast.error(`Only ${Number(product.stock)} item(s) available.`);
                       return;
                     }
 
@@ -324,7 +324,7 @@ const ProductDetails: React.FC = () => {
               {/* Available Stock */}
               {!isOutOfStock && (
                 <span className="text-xs text-neutral-400">
-                  {product.stock} available
+                  {Number(product.stock)} available
                 </span>
               )}
             </div>

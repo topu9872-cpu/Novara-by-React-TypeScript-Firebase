@@ -13,12 +13,17 @@ import { NavLink, useLocation, useNavigate } from "react-router";
 import gsap from "gsap";
 import type { User } from "../../types/User";
 import { toast } from "sonner";
-import { facebookLogin, githubLogin, googleLogin, signUp } from "../../services/auth";
+import {
+  facebookLogin,
+  githubLogin,
+  googleLogin,
+  signUp,
+} from "../../services/auth";
 
 export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
-const [authError, setAuthError] = useState("");
+  const [authError, setAuthError] = useState("");
 
   const cardRef = useRef<HTMLDivElement>(null);
   const formElementsRef = useRef<HTMLDivElement>(null);
@@ -89,13 +94,9 @@ const [authError, setAuthError] = useState("");
     }
 
     try {
-      const user = await signUp(
-        formData.name!,
-        formData.email,
-        formData.password,
-      );
+      await signUp(formData.name!, formData.email, formData.password);
 
-      toast.success(`Welcome ${user.displayName}`);
+      toast.success(`Welcome to Novara`);
       navigate(from, { replace: true });
       e.currentTarget.reset();
     } catch (error: any) {
@@ -103,116 +104,101 @@ const [authError, setAuthError] = useState("");
     }
   };
 
-const handleGoogleLogin = async () => {
-  setAuthError("");
+  const handleGoogleLogin = async () => {
+    setAuthError("");
 
-  try {
-    await googleLogin();
+    try {
+      await googleLogin();
 
-    navigate(from, {
-      replace: true,
-    });
-  } catch (error: any) {
-    console.error("GOOGLE ERROR:", error);
+      navigate(from, {
+        replace: true,
+      });
+    } catch (error: any) {
+      console.error("GOOGLE ERROR:", error);
 
-    if (
-      error.code ===
-      "auth/account-exists-with-different-credential"
-    ) {
-      setAuthError(
-        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
-      );
-      return;
+      if (error.code === "auth/account-exists-with-different-credential") {
+        setAuthError(
+          "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account.",
+        );
+        return;
+      }
+
+      if (error.code === "auth/popup-closed-by-user") {
+        setAuthError(
+          "The Google sign-in window was closed before the sign-in was completed.",
+        );
+        return;
+      }
+
+      if (error.code === "auth/popup-blocked") {
+        setAuthError(
+          "The sign-in popup was blocked by your browser. Please allow popups and try again.",
+        );
+        return;
+      }
+
+      setAuthError("We couldn't sign you in with Google. Please try again.");
     }
+  };
 
-    if (error.code === "auth/popup-closed-by-user") {
-      setAuthError(
-        "The Google sign-in window was closed before the sign-in was completed."
-      );
-      return;
+  const handleFacebookLogin = async () => {
+    setAuthError("");
+
+    try {
+      await facebookLogin();
+
+      navigate(from, {
+        replace: true,
+      });
+    } catch (error: any) {
+      console.error("FACEBOOK ERROR:", error);
+
+      if (error.code === "auth/account-exists-with-different-credential") {
+        setAuthError(
+          "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account.",
+        );
+        return;
+      }
+
+      if (error.code === "auth/popup-closed-by-user") {
+        setAuthError(
+          "The Facebook sign-in window was closed before the sign-in was completed.",
+        );
+        return;
+      }
+
+      if (error.code === "auth/popup-blocked") {
+        setAuthError(
+          "The sign-in popup was blocked by your browser. Please allow popups and try again.",
+        );
+        return;
+      }
+
+      setAuthError("We couldn't sign you in with Facebook. Please try again.");
     }
+  };
+  const handleGitHubLogin = async () => {
+    setAuthError("");
 
-    if (error.code === "auth/popup-blocked") {
-      setAuthError(
-        "The sign-in popup was blocked by your browser. Please allow popups and try again."
-      );
-      return;
+    try {
+      await githubLogin();
+
+      navigate(from, {
+        replace: true,
+      });
+    } catch (error: any) {
+      console.error("GITHUB ERROR:", error);
+
+      if (error.code === "auth/account-exists-with-different-credential") {
+        setAuthError(
+          "An account with this email already exists. Please sign in using your existing Google, Facebook, or email account.",
+        );
+        return;
+      }
+
+      setAuthError("We couldn't sign you in with GitHub. Please try again.");
     }
-
-    setAuthError(
-      "We couldn't sign you in with Google. Please try again."
-    );
-  }
-};
-
-const handleFacebookLogin = async () => {
-  setAuthError("");
-
-  try {
-    await facebookLogin();
-
-    navigate(from, {
-      replace: true,
-    });
-  } catch (error: any) {
-    console.error("FACEBOOK ERROR:", error);
-
-    if (
-      error.code ===
-      "auth/account-exists-with-different-credential"
-    ) {
-      setAuthError(
-        "An account with this email already exists. Please sign in using your existing Google, Facebook, GitHub, or email account."
-      );
-      return;
-    }
-
-    if (error.code === "auth/popup-closed-by-user") {
-      setAuthError(
-        "The Facebook sign-in window was closed before the sign-in was completed."
-      );
-      return;
-    }
-
-    if (error.code === "auth/popup-blocked") {
-      setAuthError(
-        "The sign-in popup was blocked by your browser. Please allow popups and try again."
-      );
-      return;
-    }
-
-    setAuthError(
-      "We couldn't sign you in with Facebook. Please try again."
-    );
-  }
-};
-const handleGitHubLogin = async () => {
-  setAuthError("");
-
-  try {
-    await githubLogin();
-
-    navigate(from, {
-      replace: true,
-    });
-  } catch (error: any) {
-    console.error("GITHUB ERROR:", error);
-
-    if (
-      error.code ===
-      "auth/account-exists-with-different-credential"
-    ) {
-      setAuthError(
-        "An account with this email already exists. Please sign in using your existing Google, Facebook, or email account."
-      );
-      return;
-    }
-
-    setAuthError(
-      "We couldn't sign you in with GitHub. Please try again."
-    );
-  }
-};
+  };
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-[#f7f8f6] px-4 py-12 font-sans">
@@ -261,17 +247,15 @@ const handleGitHubLogin = async () => {
               GitHub
             </button>
           </div>
-   {authError && (
-  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-    <p className="text-sm font-semibold text-red-700">
-      Sign-in failed
-    </p>
+          {authError && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-700">
+                Sign-in failed
+              </p>
 
-    <p className="mt-1 text-sm text-red-600">
-      {authError}
-    </p>
-  </div>
-)}
+              <p className="mt-1 text-sm text-red-600">{authError}</p>
+            </div>
+          )}
           {/* Divider */}
           <div className="flex items-center my-6">
             <div className="grow border-t border-neutral-100"></div>

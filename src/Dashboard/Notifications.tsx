@@ -1,303 +1,343 @@
+import { useEffect, useState } from "react";
 import {
   Bell,
-  Check,
   CheckCheck,
-  Package,
   CreditCard,
+  Package,
+  ShoppingBag,
   UserPlus,
-  AlertTriangle,
-  Trash2,
+  Clock,
 } from "lucide-react";
-import { useState } from "react";
 
-type NotificationType = "order" | "payment" | "user" | "stock" | "system";
-
-type Notification = {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  type: NotificationType;
-  read: boolean;
-};
-
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "New Order Received",
-    message: "A new order #NOV-1024 has been placed.",
-    time: "2 minutes ago",
-    type: "order",
-    read: false,
-  },
-  {
-    id: "2",
-    title: "Payment Successful",
-    message: "Payment for order #NOV-1023 has been completed.",
-    time: "18 minutes ago",
-    type: "payment",
-    read: false,
-  },
-  {
-    id: "3",
-    title: "New User Registered",
-    message: "A new customer has created an account.",
-    time: "1 hour ago",
-    type: "user",
-    read: true,
-  },
-  {
-    id: "4",
-    title: "Low Stock Alert",
-    message: "Nike Air Max 270 is running low. Only 3 items left.",
-    time: "2 hours ago",
-    type: "stock",
-    read: false,
-  },
-  {
-    id: "5",
-    title: "New Order Received",
-    message: "A new order #NOV-1022 has been placed.",
-    time: "4 hours ago",
-    type: "order",
-    read: true,
-  },
-  {
-    id: "6",
-    title: "System Update",
-    message: "Your dashboard data has been synchronized successfully.",
-    time: "Yesterday",
-    type: "system",
-    read: true,
-  },
-];
-
-const notificationConfig = {
-  order: {
-    icon: Package,
-    className:
-      "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
-  },
-  payment: {
-    icon: CreditCard,
-    className:
-      "bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400",
-  },
-  user: {
-    icon: UserPlus,
-    className:
-      "bg-purple-100 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
-  },
-  stock: {
-    icon: AlertTriangle,
-    className:
-      "bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
-  },
-  system: {
-    icon: Bell,
-    className:
-      "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400",
-  },
-};
+import {
+  listenNotifications,
+  markNotificationAsRead,
+  type NotificationItem,
+} from "../services/notifications";
 
 const Notifications = () => {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+  /* ----------------------------------
+     LISTEN TO NOTIFICATIONS
+  ---------------------------------- */
+  useEffect(() => {
+    const unsubscribe = listenNotifications(setNotifications);
 
-  const unreadCount = notifications.filter(
-    (notification) => !notification.read,
-  ).length;
+    return () => unsubscribe();
+  }, []);
 
-  const filteredNotifications =
-    filter === "unread"
-      ? notifications.filter((notification) => !notification.read)
-      : notifications;
+  /* ----------------------------------
+     UNREAD COUNT
+  ---------------------------------- */
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification,
-      ),
-    );
+  /* ----------------------------------
+     MARK SINGLE AS READ
+  ---------------------------------- */
+  const handleNotificationClick = async (notificationId: string) => {
+    const notification = notifications.find((n) => n.id === notificationId);
+
+    if (!notification || notification.read) return;
+
+    try {
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === notificationId ? { ...item, read: true } : item,
+        ),
+      );
+
+      await markNotificationAsRead(notificationId);
+    } catch (error) {
+      console.error("Failed to mark read:", error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({
-        ...notification,
-        read: true,
-      })),
-    );
+  /* ----------------------------------
+     MARK ALL AS READ
+  ---------------------------------- */
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((n) => !n.read);
+
+    if (unread.length === 0) return;
+
+    try {
+      setNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          read: true,
+        })),
+      );
+
+      await Promise.all(unread.map((n) => markNotificationAsRead(n.id)));
+    } catch (error) {
+      console.error("Failed to mark all read:", error);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.filter((notification) => notification.id !== id),
-    );
+  /* ----------------------------------
+     ICON
+  ---------------------------------- */
+  const getIcon = (type: NotificationItem["type"]) => {
+    switch (type) {
+      case "new_order":
+        return <ShoppingBag size={22} />;
+
+      case "payment_received":
+        return <CreditCard size={22} />;
+
+      case "low_stock":
+      case "out_of_stock":
+        return <Package size={22} />;
+
+      case "new_user":
+        return <UserPlus size={22} />;
+
+      default:
+        return <Bell size={22} />;
+    }
   };
 
-  const clearAll = () => {
-    setNotifications([]);
+  /* ----------------------------------
+     TYPE COLOR
+  ---------------------------------- */
+  const getTypeStyle = (type: NotificationItem["type"], read: boolean) => {
+    const styles = {
+      new_order: read
+        ? "border-green-500/30 hover:border-green-500/50"
+        : "border-green-500/70 shadow-[0_0_0_1px_rgba(34,197,94,0.08)]",
+
+      payment_received: read
+        ? "border-blue-500/30 hover:border-blue-500/50"
+        : "border-blue-500/70 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]",
+
+      low_stock: read
+        ? "border-amber-500/30 hover:border-amber-500/50"
+        : "border-amber-500/70 shadow-[0_0_0_1px_rgba(245,158,11,0.08)]",
+
+      out_of_stock: read
+        ? "border-red-500/30 hover:border-red-500/50"
+        : "border-red-500/70 shadow-[0_0_0_1px_rgba(239,68,68,0.08)]",
+
+      new_user: read
+        ? "border-purple-500/30 hover:border-purple-500/50"
+        : "border-purple-500/70 shadow-[0_0_0_1px_rgba(168,85,247,0.08)]",
+    };
+
+    return styles[type];
+  };
+
+  /* ----------------------------------
+     ICON COLOR
+  ---------------------------------- */
+  const getIconStyle = (type: NotificationItem["type"], read: boolean) => {
+    const styles = {
+      new_order: read
+        ? "bg-green-500/5 text-green-600 border-green-500/20"
+        : "bg-green-500/10 text-green-600 border-green-500/40",
+
+      payment_received: read
+        ? "bg-blue-500/5 text-blue-600 border-blue-500/20"
+        : "bg-blue-500/10 text-blue-600 border-blue-500/40",
+
+      low_stock: read
+        ? "bg-amber-500/5 text-amber-600 border-amber-500/20"
+        : "bg-amber-500/10 text-amber-600 border-amber-500/40",
+
+      out_of_stock: read
+        ? "bg-red-500/5 text-red-600 border-red-500/20"
+        : "bg-red-500/10 text-red-600 border-red-500/40",
+
+      new_user: read
+        ? "bg-purple-500/5 text-purple-600 border-purple-500/20"
+        : "bg-purple-500/10 text-purple-600 border-purple-500/40",
+    };
+
+    return styles[type];
+  };
+
+  /* ----------------------------------
+     PRIORITY
+  ---------------------------------- */
+  const getPriorityStyle = (priority: NotificationItem["priority"]) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500/10 text-red-600 border-red-500/20";
+
+      case "medium":
+        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+
+      case "low":
+        return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+
+      default:
+        return "bg-muted text-muted-foreground border-border/50";
+    }
+  };
+
+  /* ----------------------------------
+     RELATIVE TIME
+  ---------------------------------- */
+  const getRelativeTime = (createdAt?: { toDate?: () => Date } | any) => {
+    if (!createdAt) return "Just now";
+
+    const date =
+      typeof createdAt.toDate === "function"
+        ? createdAt.toDate()
+        : new Date(createdAt);
+
+    const diff = Date.now() - date.getTime();
+
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (seconds < 60) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   return (
-    <div className="min-h-screen bg-base-200/40 px-4 py-6 md:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Bell size={22} />
-              </div>
+    <div className="w-full rounded-xl  bg-background shadow-sm">
+      {/* HEADER */}
+      <div className="flex flex-col justify-between gap-4  p-6 sm:flex-row sm:items-center md:p-8">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Notifications
+            </h1>
 
-              <div>
-                <h1 className="text-2xl font-bold">Notifications</h1>
-
-                <p className="text-sm text-base-content/60">
-                  Stay updated with everything happening in Novara.
-                </p>
-              </div>
-            </div>
+            {unreadCount > 0 && (
+              <span className="flex h-6 items-center justify-center rounded-full bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-sm">
+                {unreadCount} new
+              </span>
+            )}
           </div>
 
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Review your latest store activity and alerts.
+          </p>
+        </div>
+
+        {unreadCount > 0 && (
           <button
+            type="button"
             onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-            className="btn btn-outline btn-sm gap-2"
+            className="group flex items-center gap-2 rounded-lg border border-transparent bg-muted/50 px-4 py-2 text-sm font-medium text-foreground transition-all hover:border-border/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <CheckCheck size={16} />
+            <CheckCheck
+              size={16}
+              className="text-muted-foreground transition-transform group-hover:text-foreground"
+            />
             Mark all as read
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Notification Card */}
-        <div className="overflow-hidden rounded-2xl border border-base-300 bg-base-100">
-          {/* Toolbar */}
-          <div className="flex flex-col gap-3 border-b border-base-300 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter("all")}
-                className={`btn btn-sm ${
-                  filter === "all" ? "btn-primary" : "btn-ghost"
-                }`}
-              >
-                All
-              </button>
-
-              <button
-                onClick={() => setFilter("unread")}
-                className={`btn btn-sm ${
-                  filter === "unread" ? "btn-primary" : "btn-ghost"
-                }`}
-              >
-                Unread
-                {unreadCount > 0 && (
-                  <span className="badge badge-sm">{unreadCount}</span>
-                )}
-              </button>
+      {/* NOTIFICATIONS */}
+      <div>
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-4 py-32 text-center">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-border/50 bg-muted/30 shadow-inner">
+              <Bell size={32} className="text-muted-foreground/50" />
             </div>
 
-            {notifications.length > 0 && (
-              <button
-                onClick={clearAll}
-                className="btn btn-ghost btn-sm gap-2 text-error"
-              >
-                <Trash2 size={16} />
-                Clear all
-              </button>
-            )}
+            <h2 className="text-xl font-semibold text-foreground">
+              No notifications yet
+            </h2>
+
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+              When there's activity in your store like a new order or a low
+              stock alert, it will show up here.
+            </p>
           </div>
+        ) : (
+          <div className="flex flex-col gap-3 p-4 md:p-6">
+            {notifications.map((notification) => {
+              const isUnread = !notification.read;
 
-          {/* Notifications */}
-          <div>
-            {filteredNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-base-200">
-                  <Bell size={28} className="text-base-content/40" />
-                </div>
+              return (
+                <button
+                  key={notification.id}
+                  type="button"
+                  onClick={() => handleNotificationClick(notification.id)}
+                  className={`group relative flex w-full items-start gap-4 rounded-2xl border bg-background p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-6 ${getTypeStyle(
+                    notification.type,
+                    notification.read,
+                  )} ${isUnread ? "bg-muted/10" : "opacity-90"}`}
+                >
+                  {/* UNREAD DOT */}
+                  {isUnread && (
+                    <span className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-primary shadow-sm" />
+                  )}
 
-                <h3 className="text-lg font-semibold">No notifications</h3>
-
-                <p className="mt-1 max-w-sm text-sm text-base-content/50">
-                  You're all caught up. New notifications will appear here.
-                </p>
-              </div>
-            ) : (
-              filteredNotifications.map((notification) => {
-                const config = notificationConfig[notification.type];
-
-                const Icon = config.icon;
-
-                return (
+                  {/* ICON */}
                   <div
-                    key={notification.id}
-                    className={`group flex gap-4 border-b border-base-200 px-5 py-5 transition last:border-b-0 hover:bg-base-200/40 ${
-                      !notification.read ? "bg-primary/3" : ""
-                    }`}
+                    className={`mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-all duration-200 group-hover:scale-105 ${getIconStyle(
+                      notification.type,
+                      notification.read,
+                    )}`}
                   >
-                    {/* Icon */}
-                    <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${config.className}`}
-                    >
-                      <Icon size={20} />
+                    {getIcon(notification.type)}
+                  </div>
+
+                  {/* CONTENT */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                      <h2
+                        className={`text-base ${
+                          isUnread
+                            ? "font-semibold text-foreground"
+                            : "font-medium text-foreground/80"
+                        }`}
+                      >
+                        {notification.title}
+                      </h2>
+
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Clock size={12} />
+
+                        {getRelativeTime(notification.createdAt)}
+                      </span>
                     </div>
 
-                    {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex items-center gap-2">
-                          <h3
-                            className={`text-sm font-semibold ${
-                              !notification.read
-                                ? "text-base-content"
-                                : "text-base-content/80"
-                            }`}
-                          >
-                            {notification.title}
-                          </h3>
+                    <p
+                      className={`max-w-4xl text-sm leading-relaxed ${
+                        isUnread
+                          ? "text-foreground/90"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {notification.message}
+                    </p>
 
-                          {!notification.read && (
-                            <span className="h-2 w-2 rounded-full bg-primary" />
-                          )}
-                        </div>
+                    {/* FOOTER */}
+                    <div className="mt-3 flex items-center gap-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getPriorityStyle(
+                          notification.priority,
+                        )}`}
+                      >
+                        {notification.priority} priority
+                      </span>
 
-                        <span className="text-xs text-base-content/40">
-                          {notification.time}
-                        </span>
-                      </div>
-
-                      <p className="mt-1 text-sm leading-6 text-base-content/60">
-                        {notification.message}
-                      </p>
-
-                      <div className="mt-3 flex items-center gap-4">
-                        {!notification.read && (
-                          <button
-                            onClick={() => markAsRead(notification.id)}
-                            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                          >
-                            <Check size={14} />
-                            Mark as read
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => deleteNotification(notification.id)}
-                          className="text-xs text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {notification.read ? "Read" : "Unread"}
+                      </span>
                     </div>
                   </div>
-                );
-              })
-            )}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

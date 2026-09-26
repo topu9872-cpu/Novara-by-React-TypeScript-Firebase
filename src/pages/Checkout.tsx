@@ -176,9 +176,6 @@ const handleStripeCheckout = async (e: React.FormEvent) => {
     });
 
     const data = await response.json();
-
-    console.log("Stripe response:", data);
-
     if (!response.ok || !data.success) {
       throw new Error(
         data.message ||

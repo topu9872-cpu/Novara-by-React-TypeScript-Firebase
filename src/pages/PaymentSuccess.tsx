@@ -4,6 +4,7 @@ import { NavLink, useSearchParams } from "react-router";
 import gsap from "gsap";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { createOrder } from "../services/productService";
+import { createNotification } from "../services/notifications";
 
 interface PaymentData {
   success: boolean;
@@ -37,46 +38,89 @@ const PaymentSuccess = () => {
       setLoading(false);
       return;
     }
+const verifyPayment = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-    const verifyPayment = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/verifyCheckoutSession?session_id=${encodeURIComponent(
+        sessionId,
+      )}`,
+    );
 
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/verifyCheckoutSession?session_id=${encodeURIComponent(
-            sessionId,
-          )}`,
-        );
+    const data = await response.json();
 
-        const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Payment verification failed.",
+      );
+    }
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "Payment verification failed.");
-        }
-        await createOrder({
-          userId: data.userId,
-          email: data.email,
-          displayName: data.displayName,
-          phoneNumber: data.phoneNumber,
-          amount: data.amount,
-          currency: data.currency,
-          paymentStatus: data.paymentStatus,
-          products: data.products,
-          createdAt: new Date(),
+    // Prevent duplicate order creation/notifications
+    const processedSessionKey = `novara-payment-${sessionId}`;
+    const alreadyProcessed =
+      sessionStorage.getItem(processedSessionKey);
+
+    if (!alreadyProcessed) {
+      await createOrder({
+        userId: data.userId,
+        email: data.email,
+        displayName: data.displayName,
+        phoneNumber: data.phoneNumber,
+        amount: data.amount,
+        currency: data.currency,
+        paymentStatus: data.paymentStatus,
+        products: data.products,
+        createdAt: new Date(),
+      });
+
+      // New Order notification
+      await createNotification({
+        title: "New Order",
+        message: `${data.displayName || data.email} placed a new order worth $${Number(
+          data.amount,
+        ).toFixed(2)}.`,
+        type: "new_order",
+        priority: "high",
+      });
+
+      // Payment Received notification
+      if (data.paymentStatus === "paid") {
+        await createNotification({
+          title: "Payment Received",
+          message: `Payment of $${Number(data.amount).toFixed(
+            2,
+          )} ${String(data.currency || "USD").toUpperCase()} was received from ${
+            data.displayName || data.email
+          }.`,
+          type: "payment_received",
+          priority: "high",
         });
-
-        setPaymentData(data);
-      } catch (error) {
-        console.error("Payment verification error:", error);
-
-        setError(
-          error instanceof Error ? error.message : "Unable to verify payment.",
-        );
-      } finally {
-        setLoading(false);
       }
-    };
+
+      sessionStorage.setItem(
+        processedSessionKey,
+        "true",
+      );
+    }
+
+    setPaymentData(data);
+  } catch (error) {
+    console.error(
+      "Payment verification error:",
+      error,
+    );
+
+    setError(
+      error instanceof Error
+        ? error.message
+        : "Unable to verify payment.",
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
     verifyPayment();
   }, [sessionId]);

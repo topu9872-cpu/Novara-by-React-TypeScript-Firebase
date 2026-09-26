@@ -5,7 +5,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router";
-import { Search, User, Menu, X, LayoutDashboard } from "lucide-react";
+import { Search, User, Menu, X, LayoutDashboard, Bell } from "lucide-react";
 import { TiShoppingCart } from "react-icons/ti";
 import gsap from "gsap";
 import {
@@ -156,7 +156,6 @@ export const Navbar: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-
       if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
 
@@ -166,6 +165,14 @@ export const Navbar: React.FC = () => {
 
     return unsubscribe;
   }, []);
+
+  // Helper styling function for dropdown links to keep JSX clean
+  const getDropdownLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 text-xs font-semibold rounded-xl px-3 py-2.5 transition-all ${
+      isActive
+        ? "bg-emerald-100 text-emerald-900"
+        : "text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900"
+    }`;
 
   return (
     <header
@@ -263,39 +270,36 @@ export const Navbar: React.FC = () => {
 
                 <div className="space-y-0.5 py-1">
                   <li>
-                    <NavLink
-                      to="/profile"
-                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
-                    >
+                    <NavLink to="/profile" className={getDropdownLinkClass}>
                       <FaUser className="text-emerald-800 text-sm" />
                       <span>Profile</span>
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink
-                      to="/orders"
-                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
-                    >
+                    <NavLink to="/orders" className={getDropdownLinkClass}>
                       <TiShoppingCart className="text-emerald-800 text-lg" />
                       <span>My Orders</span>
                     </NavLink>
                   </li>
+                  <li>
+                    <NavLink
+                      to="/user-notifications"
+                      className={getDropdownLinkClass}
+                    >
+                      <Bell className="text-emerald-800 w-4 h-4" />
+                      <span>Notifications</span>
+                    </NavLink>
+                  </li>
                   {role === "admin" && (
                     <li>
-                      <NavLink
-                        to="/dashboard"
-                        className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
-                      >
-                        <LayoutDashboard className="text-emerald-800 w-4 h-4 text-bold" /> 
+                      <NavLink to="/dashboard" className={getDropdownLinkClass}>
+                        <LayoutDashboard className="text-emerald-800 w-4 h-4 text-bold" />
                         <span>Dashboard</span>
                       </NavLink>
                     </li>
                   )}
                   <li>
-                    <NavLink
-                      to="/settings"
-                      className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl px-3 py-2.5 transition-all"
-                    >
+                    <NavLink to="/settings" className={getDropdownLinkClass}>
                       <FaGear className="text-emerald-800 text-sm" />
                       <span>Settings</span>
                     </NavLink>
@@ -361,7 +365,7 @@ export const Navbar: React.FC = () => {
                   `block text-sm font-medium py-2.5 px-4 rounded-xl transition-colors ${
                     isActive
                       ? "text-emerald-700 bg-emerald-50 font-semibold"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      : "text-gray-500 hover:text-emerald-900"
                   }`
                 }
               >

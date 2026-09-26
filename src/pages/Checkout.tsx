@@ -165,8 +165,6 @@ const handleStripeCheckout = async (e: React.FormEvent) => {
       product: checkoutItems,
     };
 
-    console.log("Stripe checkout payload:", payload);
-
     const response = await fetch(`${import.meta.env.VITE_API_URL}/createCheckoutSession`, {
       method: "POST",
       headers: {

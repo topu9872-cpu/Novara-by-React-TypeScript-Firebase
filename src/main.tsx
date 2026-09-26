@@ -30,6 +30,7 @@ import orders from "./Dashboard/orders";
 import products from "./Dashboard/products";
 import payments from "./Dashboard/payments";
 import Notifications from "./Dashboard/Notifications";
+import UserNotifications from "./pages/UserNotifications";
 
 const router = createBrowserRouter([
   {
@@ -107,6 +108,10 @@ const router = createBrowserRouter([
       {
         path: "/payment-success",
         element: <PaymentSuccess />,
+      },
+      {
+        path: "/user-notifications",
+        element: <UserNotifications />,
       },
     ],
   },

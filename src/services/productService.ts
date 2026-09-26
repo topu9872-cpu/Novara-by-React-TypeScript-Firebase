@@ -20,6 +20,7 @@ import type { CartItem } from "../types/Cart";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import { toast } from "sonner";
 import type { Address } from "../types/Address";
+import { createUserNotification } from "./userNotifications";
 import { createNotification } from "./notifications";
 
 const getCurrentUser = async (): Promise<User | null> => {
@@ -126,22 +127,17 @@ export const createOrder = async (
 
     const orderRef = doc(db, "orders", sessionId);
 
-    const stockNotifications: {
-      type: "low_stock" | "out_of_stock";
-      productName: string;
-      newStock: number;
-    }[] = [];
-
-    // =====================================
-    // 1. CREATE ORDER + UPDATE STOCK
-    // =====================================
-
     const result = await runTransaction(db, async (transaction) => {
+      const existingOrder = await transaction.get(orderRef);
+
+      if (existingOrder.exists()) {
+        return null;
+      }
+
       const productsToUpdate = [];
 
       for (const item of orderData.products) {
         const productRef = doc(db, "Products", item.id);
-
         const productSnap = await transaction.get(productRef);
 
         if (!productSnap.exists()) {
@@ -149,7 +145,6 @@ export const createOrder = async (
         }
 
         const product = productSnap.data();
-
         const currentStock = Number(product.stock || 0);
         const buyingQuantity = Number(item.quantity || 0);
 
@@ -163,56 +158,23 @@ export const createOrder = async (
           );
         }
 
-        const newStock = currentStock - buyingQuantity;
-
-        // =====================================
-        // CHECK STOCK NOTIFICATION
-        // =====================================
-
-        if (currentStock > 5 && newStock <= 5 && newStock > 0) {
-          stockNotifications.push({
-            type: "low_stock",
-            productName: item.name,
-            newStock,
-          });
-        }
-
-        if (currentStock > 0 && newStock === 0) {
-          stockNotifications.push({
-            type: "out_of_stock",
-            productName: item.name,
-            newStock,
-          });
-        }
-
         productsToUpdate.push({
           productRef,
           product,
-          newStock,
+          newStock: currentStock - buyingQuantity,
         });
       }
-
-      // =====================================
-      // CREATE ORDER
-      // =====================================
 
       const order = {
         ...orderData,
         createdAt: new Date(),
       };
 
-      transaction.set(orderRef, order, {
-        merge: true,
-      });
-
-      // =====================================
-      // DECREASE STOCK
-      // =====================================
+      transaction.set(orderRef, order);
 
       for (const item of productsToUpdate) {
         transaction.update(item.productRef, {
           stock: item.newStock,
-
           status:
             item.newStock === 0
               ? "Out of Stock"
@@ -223,23 +185,48 @@ export const createOrder = async (
       return order;
     });
 
-    // =====================================
-    // 2. NEW ORDER NOTIFICATION
-    // =====================================
+    // Order already exists
+    if (!result) {
+      return null;
+    }
 
+    // Admin: New Order
     await createNotification({
       title: "New Order",
-      message: `${
-        orderData.displayName || orderData.email
-      } placed a new order worth $${Number(orderData.amount).toFixed(2)}.`,
+      message: `${orderData.displayName || orderData.email} placed a new order worth $${Number(
+        orderData.amount,
+      ).toFixed(2)}.`,
       type: "new_order",
       priority: "high",
     });
 
+    // Admin: Payment Received
+    if (orderData.paymentStatus === "paid") {
+      await createNotification({
+        title: "Payment Received",
+        message: `Payment of $${Number(orderData.amount).toFixed(2)} ${String(
+          orderData.currency || "USD",
+        ).toUpperCase()} was received from ${
+          orderData.displayName || orderData.email
+        }.`,
+        type: "payment_received",
+        priority: "high",
+      });
+    }
+
+    // Customer: Order Successful
+    if (orderData.userId) {
+      await createUserNotification({
+        userId: orderData.userId,
+        title: "Order Successful",
+        message: "Your order has been placed successfully.",
+        type: "order_placed",
+      });
+    }
+
     return result as Orders;
   } catch (error) {
     console.error("❌ ORDER FAILED:", error);
-
     return null;
   }
 };

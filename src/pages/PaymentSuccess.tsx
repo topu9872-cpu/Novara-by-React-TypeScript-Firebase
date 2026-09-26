@@ -4,7 +4,6 @@ import { NavLink, useSearchParams } from "react-router";
 import gsap from "gsap";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { createOrder } from "../services/productService";
-import { createNotification } from "../services/notifications";
 
 interface PaymentData {
   success: boolean;
@@ -57,7 +56,6 @@ const verifyPayment = async () => {
       );
     }
 
-    // Prevent duplicate order creation/notifications
     const processedSessionKey = `novara-payment-${sessionId}`;
     const alreadyProcessed =
       sessionStorage.getItem(processedSessionKey);
@@ -75,34 +73,8 @@ const verifyPayment = async () => {
         createdAt: new Date(),
       });
 
-      // New Order notification
-      await createNotification({
-        title: "New Order",
-        message: `${data.displayName || data.email} placed a new order worth $${Number(
-          data.amount,
-        ).toFixed(2)}.`,
-        type: "new_order",
-        priority: "high",
-      });
-
-      // Payment Received notification
-      if (data.paymentStatus === "paid") {
-        await createNotification({
-          title: "Payment Received",
-          message: `Payment of $${Number(data.amount).toFixed(
-            2,
-          )} ${String(data.currency || "USD").toUpperCase()} was received from ${
-            data.displayName || data.email
-          }.`,
-          type: "payment_received",
-          priority: "high",
-        });
-      }
-
-      sessionStorage.setItem(
-        processedSessionKey,
-        "true",
-      );
+    
+    
     }
 
     setPaymentData(data);

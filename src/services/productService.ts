@@ -134,8 +134,20 @@ export const createOrder = async (
         return null;
       }
 
-      const productsToUpdate = [];
+      const productsToUpdate: {
+        productRef: any;
+        product: any;
+        newStock: number;
+      }[] = [];
 
+      const stockAlerts: {
+        title: string;
+        message: string;
+        type: "low_stock" | "out_of_stock";
+        priority: "medium" | "high";
+      }[] = [];
+
+      // Validate stock
       for (const item of orderData.products) {
         const productRef = doc(db, "Products", item.id);
         const productSnap = await transaction.get(productRef);
@@ -158,11 +170,30 @@ export const createOrder = async (
           );
         }
 
+        const newStock = currentStock - buyingQuantity;
+
         productsToUpdate.push({
           productRef,
           product,
-          newStock: currentStock - buyingQuantity,
+          newStock,
         });
+
+        // Stock notifications
+        if (newStock === 0) {
+          stockAlerts.push({
+            title: "Out of Stock",
+            message: `${product.name} is now out of stock.`,
+            type: "out_of_stock",
+            priority: "high",
+          });
+        } else if (newStock > 0 && newStock <= 5) {
+          stockAlerts.push({
+            title: "Low Stock",
+            message: `Only ${newStock} item(s) left for ${product.name}.`,
+            type: "low_stock",
+            priority: "medium",
+          });
+        }
       }
 
       const order = {
@@ -172,59 +203,64 @@ export const createOrder = async (
 
       transaction.set(orderRef, order);
 
+      // Update stock
       for (const item of productsToUpdate) {
         transaction.update(item.productRef, {
           stock: item.newStock,
           status:
-            item.newStock === 0
+            item.newStock <= 1
               ? "Out of Stock"
               : item.product.status || "Active",
         });
       }
 
-      return order;
+      return { order, stockAlerts };
     });
 
-    // Order already exists
-    if (!result) {
-      return null;
-    }
+    if (!result) return null;
+
+    const { order, stockAlerts } = result;
 
     // Admin: New Order
     await createNotification({
       title: "New Order",
-      message: `${orderData.displayName || orderData.email} placed a new order worth $${Number(
-        orderData.amount,
-      ).toFixed(2)}.`,
+      message: `${
+        order.displayName || order.email
+      } placed a new order worth $${Number(order.amount).toFixed(2)}.`,
       type: "new_order",
       priority: "high",
     });
 
     // Admin: Payment Received
-    if (orderData.paymentStatus === "paid") {
+    if (order.paymentStatus === "paid") {
       await createNotification({
         title: "Payment Received",
-        message: `Payment of $${Number(orderData.amount).toFixed(2)} ${String(
-          orderData.currency || "USD",
-        ).toUpperCase()} was received from ${
-          orderData.displayName || orderData.email
+        message: `Payment of $${Number(order.amount).toFixed(
+          2,
+        )} ${String(order.currency || "USD").toUpperCase()} was received from ${
+          order.displayName || order.email
         }.`,
         type: "payment_received",
         priority: "high",
       });
     }
 
-    // Customer: Order Successful
-    if (orderData.userId) {
+    // Customer notification
+    if (order.userId) {
       await createUserNotification({
-        userId: orderData.userId,
+        userId: order.userId,
         title: "Order Successful",
         message: "Your order has been placed successfully.",
         type: "order_placed",
       });
     }
 
-    return result as Orders;
+    // Stock notifications
+    for (const alert of stockAlerts) {
+      await createNotification(alert);
+    }
+
+    return order;
   } catch (error) {
     console.error("❌ ORDER FAILED:", error);
     return null;

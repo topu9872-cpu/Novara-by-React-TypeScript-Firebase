@@ -36,6 +36,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     Component: App,
+
     children: [
       {
         index: true,
@@ -114,10 +115,12 @@ const router = createBrowserRouter([
         element: <UserNotifications />,
       },
     ],
+   
   },
   {
     path: "/dashboard",
     Component: AdminLayout,
+
     children: [
       {
         index: true,
@@ -141,7 +144,10 @@ const router = createBrowserRouter([
         Component: Notifications,
       },
     ],
+  
   },
+ 
+ 
 ]);
 
 export default App;
